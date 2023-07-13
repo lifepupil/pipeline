@@ -18,10 +18,14 @@ from scipy import signal
 from scipy.signal import sosfiltfilt, butter
 import seaborn as sns
 import string
+import statistics as stats
+import sympy as sp
+import pyprep as pp
 
 import mne
-from mne.preprocessing import ICA
+from mne.preprocessing import ICA, find_bad_channels_maxwell
 import torch
+import mne_icalabel as mica
 from mne_icalabel import label_components
 import os
 import sys
@@ -39,7 +43,7 @@ do_pac = False                      # PHASE AMPLITUDE COUPLING USING TENSORPAC
 # PARAMETERS
 if drive_letter=='C':
     base_dir = "C:\\Users\\CRichard\\Documents\\COGA_eec\\"
-    eeg_dir = "C:\\Users\\CRichard\\Documents\\COGA_eec\\data_for_mwt\\"
+    eeg_dir = "C:\\Users\\CRichard\\Documents\\COGA_eeo\\data_for_mwt\\"
 else:
     base_dir = drive_letter + ":\\Documents\\COGA_eec\\"
     eeg_dir = drive_letter + ":\\Documents\\COGA_eec\\data_for_mwt\\"
@@ -95,10 +99,11 @@ if do_plot_eeg_signal_and_mwt:
 # PARAMETERS FOR do_filter_eeg_signal_cnt 
 if do_filter_eeg_signal_cnt:
     notch_freq = 60.0       # FREQUENCY (Hz) TO REMOVE LINE NOISE FROM SIGNAL 
-    lowfrq = 0.1            # LOW PASS FREQUENCY
-    hifrq = 100              # HIGH PASS FREQUENCY
+    lowfrq = 1              # LOW PASS FREQUENCY, RECOMMENDED SETTING TO 1 HZ IF USING mne-icalabel
+    hifrq = 100             # HIGH PASS FREQUENCY
+    maxZeroPerc = 0.5       # PERCENTAGE OF ZEROS IN SIGNAL ABOVE WHICH CHANNEL IS LABELED 'BADS'
     do_plot_channels = True
-    
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # TO CONVERT .SAS7PDAT FILES TO TABLES SO THAT SUBJECT METADATA CAN BE USED DOWNSTREAM
@@ -115,7 +120,7 @@ if do_filter_eeg_signal_cnt:
     cntList = csd.get_file_list(base_dir, 'cnt')
     #  WE GO THROUGH EACH OF THE FILES IN cntList 
     for f in range(len(cntList)):
-        fname = cntList[16][1]
+        fname = cntList[15][1]
         # fname = cntList[f][1]
         path_and_file = cntList[f][0] + '\\' + fname
         try:
@@ -127,20 +132,39 @@ if do_filter_eeg_signal_cnt:
             with open(base_dir + 'errors_from_core_pheno.txt', 'a') as f:
                 f.write(str(fname) + '\t ' + str(e) + '\n')
             continue                
-                
+        
+        prep_params = {
+            "ref_chs": "eeg",
+            "reref_chs": "eeg",
+            "line_freqs": np.arange(60, int(data.info['sfreq']) / 2, 60),
+        }
+        prep = pp.PrepPipeline(data, prep_params, data.get_montage())
+        prep.fit()
+        
         info = data.info
         # WE EXCLUDE THE BLANK CHANNEL AND RELABEL CHANNEL TYPES OF THE TWO EYE CHANNELS TO eog
         # ASSUMES THAT ALL CHANNELS ARE LABELED AS EEG WHETHER THEY ARE OR NOT
         data.set_channel_types({'X': 'eog', 'Y': 'eog'})
+        # HOWEVER THE Y CHANNEL IS OFTEN FLAT SO THIS NEXT LINE IS OPTIONAL FOR DEBUG
+        # data.info['bads'] = ['BLANK']
         # IN CASE YOU WANT TO SEE WHAT THE CHANNEL TYPE ASSIGNMENTS ARE JUST RUN LINE OF CODE BELOW
         # for i in range(len(info['chs'])): print([str(i) + ' ' + str(filtered_data.info['chs'][i]['kind'])])
+        
+        channels = data.ch_names
+        # ******************** EEG SCREENING FOR BAD CHANNELS BEFORE ARTIFACT IDENTIFICATION AND REMOVAL
+        # for ch in channels:
+        #     # SIMPLE WAY TO EXCLUDE FLAT CHANNELS ALTHOUGH SOME CHANNELS CAN BE 
+        #     # FLAT BUT HAVE FEW ACTUAL ZEROS IN THE SIGNAL
+        #     percZeros = len(np.where(data.get_data([ch])[0]==0))/len(data.get_data([ch])[0])
+        #     if percZeros>=maxZeroPerc:
+        #         data.set_channel_types({ch: 'bads'})
+        
         
         # WE WANT TO EXCLUDE ANY CHANNELS THAT AREN'T EEG OR eog JUST IN CASE WE HAVE ANY THERE
         eeg_indices = mne.pick_types(info, meg=False, eeg=True, ecg=False, eog=True, exclude=['bads', 'BLANK'])
         mne.pick_info(info, eeg_indices, copy=False)
         # NOW WE GET SAMPLE RATE AND CHANNEL INFO
         samp_freq = int(info['sfreq'])  # sample rate (Hz)
-        channels = data.ch_names
         # NOW WE PERFORM PREPROCESSING STEPS ON THE (COMPLETELY) RAW DATA FROM THE .CNT FILES
         # LOW AND HIGH PASS FILTERING THAT SATISFIES ZERO-PHASE DESIGN
         filtered_data = data.copy().filter(lowfrq, hifrq)
@@ -149,10 +173,9 @@ if do_filter_eeg_signal_cnt:
         # WE NEED TO APPLY A COMMON AVERAGE REFERENCE TO USE MNE-ICALabel
         # UNCLEAR WHETHER AVERAGE SHOULD INCLUDE OR EXCLUDE THE EYE CHANNELS 
         # ALSO, WE WANT TO EXCLUDE BAD CHANNELS BEFORE THIS STEP SO WE MUST 
-        # HAVE A PRELIMINARY CHECK OF CONSPICUOUSLY BAD CHANNELS
+        # HAVE A PRELIMINARY CHECK OF CONSPICUOUSLY BAD CHANNELS            
         
-        # ******************** PUT QUICK EEG SCREENING FUNCTION HERE
-
+        # SETS AVERAGE REFERENCE BUT DO WE NEED TO DE-REFERENCE BEFORE THIS STEP?
         filtered_data = filtered_data.set_eeg_reference("average")
         # NOW WE DO ICA FOR ARTIFACT REMOVAL
         # UNCLEAR WHETHER EYE CHANNELS SHOULD BE INCLUDED OR NOT IN ICA
@@ -164,11 +187,18 @@ if do_filter_eeg_signal_cnt:
             fit_params=dict(extended=True),
         )
         ica.fit(filtered_data)
-        # NOW WE GET THE PREDICTED CLASSIFICATIONS OF THE INDEPENDENT COMPONENTS 
+        # SINCE ica HAS THE EOG CHANNEL LABELED AS EEG (THIS CAN BE CONFIRMED WITH 
+        # ica.get_channel_types() AT THE CONSOLE) THE PREDICTION FROM mne_icalabel 
+        # LABELS WHAT IS CLEARLY EYE BLINK COMPONENT AS BRAIN SO HERE WE ARE USING THE 
+        # find_bads_eog FUNCTION TO FIND THE MOST LIKELY EYE BLINK IC AND EXCLUDES IT
+        eog_indices, eog_scores = ica.find_bads_eog(filtered_data)
+        ica.exclude = eog_indices
+        # NOW WE GET THE PREDICTED CLASSIFICATIONS OF THE REMAINING INDEPENDENT COMPONENTS 
         ic_labels = label_components(filtered_data, ica, method="iclabel")
-        # THEN EXCLUDE ANY ICs THAT ARE NOT CLASSIFIED AS 'BRAIN' OR 'OTHER'
         labels = ic_labels["labels"]
-        print(ic_labels["labels"])
+        # TO PRINT OUT LIST OF LABELS BY INDEX FOR QUICK INTERPRETATION OF IC PLOT
+        for i in range(len(labels)): print([str(i) + ' ' + labels[i]])
+        # THEN EXCLUDE ANY ICs THAT ARE NOT CLASSIFIED AS 'BRAIN' OR 'OTHER'
         exclude_idx = [idx for idx, label in enumerate(labels) if label not in ["brain", "other"]]
         # AND FINALLY WE RECONSTRUCT THE SIGNAL USING THE INCLUDED ICs
         reconst_data = filtered_data.copy()
@@ -177,6 +207,12 @@ if do_filter_eeg_signal_cnt:
         # filtered_data.plot()
         # data.plot_psd()
         # filtered_data.plot_psd()
+        # x = reconst_data.get_data(['X'])[0]
+        # dx = sp.diff(x)
+        # y = reconst_data.get_data(['Y'])[0]
+        # dy = sp.diff(y)
+        
+        # # UNCOMMENT THE NEXT THREE LINES TO GET PLOTS OF ICs, AND BEFORE AND AFTER RECONSTRUCTION OF SIGNALS
         ica.plot_sources(filtered_data, show_scrollbars=False, show=True)
         filtered_data.plot(show_scrollbars=False, title='filtered')
         reconst_data.plot(show_scrollbars=False, title='reconstr')
