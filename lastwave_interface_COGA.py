@@ -23,30 +23,26 @@ import sympy as sp
 import pyprep as pp
 
 import mne
-from mne.preprocessing import ICA, find_bad_channels_maxwell
+from mne.preprocessing import ICA, create_eog_epochs
 import torch
 import mne_icalabel as mica
 from mne_icalabel import label_components
 import os
 import sys
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import coga_support_defs as csd
 
 
 # INSTANCE VARIABLES
-drive_letter = 'E'
 do_sas_convert = False             # TO CONVERT .SAS7PDAT FILES TO TABLES SO THAT SUBJECT METADATA CAN BE USED DOWNSTREAM
 do_plot_eeg_signal_and_mwt = False # TO PLOT SIGNAL AND HEATMAP FOR A GIVEN FILE
 do_filter_eeg_signal_cnt = True    # TO DO LOW PASS, HIGH PASS, NOTCH FILTER TO REMOVE LINE NOISE FROM SIGNAL, AND ICA
 do_pac = False                      # PHASE AMPLITUDE COUPLING USING TENSORPAC
 
 # PARAMETERS
-if drive_letter=='C':
-    base_dir = "C:\\Users\\CRichard\\Documents\\COGA_eec\\"
-    eeg_dir = "C:\\Users\\CRichard\\Documents\\COGA_eeo\\data_for_mwt\\"
-else:
-    base_dir = drive_letter + ":\\Documents\\COGA_eec\\"
-    eeg_dir = drive_letter + ":\\Documents\\COGA_eec\\data_for_mwt\\"
+base_dir = "E:\\Documents\\COGA_eec\\"
+eeg_dir = "C:\\Users\\lifep\\Documents\\COGA_eec\\"
     
 # PARAMETERS FOR do_pac PHASE AMPLITUDE COUPLING USING TENSORPAC
 if do_pac:
@@ -102,7 +98,9 @@ if do_filter_eeg_signal_cnt:
     lowfrq = 1              # LOW PASS FREQUENCY, RECOMMENDED SETTING TO 1 HZ IF USING mne-icalabel
     hifrq = 100             # HIGH PASS FREQUENCY
     maxZeroPerc = 0.5       # PERCENTAGE OF ZEROS IN SIGNAL ABOVE WHICH CHANNEL IS LABELED 'BADS'
-    do_plot_channels = True
+    do_plot_channels = True # TO GENERATE PLOTS OF THE CLEANED EEG SIGNAL
+    mpl.rcParams['figure.dpi'] = 300 # DETERMINES THE RESOLUTION OF THE EEG PLOTS
+    eye_blink_chans = ['X', 'Y'] # NAMES OF CHANNELS CONTAINING EOG
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -118,13 +116,17 @@ if do_plot_eeg_signal_and_mwt:
 if do_filter_eeg_signal_cnt:
     # GET ALL THE .CNT FILE NAMES AND PATHS AND PUT INTO LIST 
     cntList = csd.get_file_list(base_dir, 'cnt')
+    # IN CASE THIS CODE HAS BEEN PARTIALLY RUN ON RAW DATA ALREADY
+    # WE WANT TO FIND OUT WHAT OUTPUT FILES HAVE ALREADY BEEN GENERATED 
+    # SO WE CAN EXCLUDE THEM FROM THE ORIGINAL LIST AND ONLY PROCESS RAW DATA
+    # FILES THAT HAVEN'T YET BEEN PROCESSED. 
+    completedList = os.listdir(eeg_dir + 'cleaned_data\\')
     #  WE GO THROUGH EACH OF THE FILES IN cntList 
     for f in range(len(cntList)):
-        fname = cntList[15][1]
-        # fname = cntList[f][1]
+        fname = cntList[f][1]
         path_and_file = cntList[f][0] + '\\' + fname
         try:
-            data = mne.io.read_raw_cnt(path_and_file, preload=True)
+            data = mne.io.read_raw_cnt(path_and_file, preload=True, verbose=False)
             # print(data.info["bads"])
             # data.plot()
             # a=1
@@ -133,35 +135,49 @@ if do_filter_eeg_signal_cnt:
                 f.write(str(fname) + '\t ' + str(e) + '\n')
             continue                
         
-        prep_params = {
-            "ref_chs": "eeg",
-            "reref_chs": "eeg",
-            "line_freqs": np.arange(60, int(data.info['sfreq']) / 2, 60),
-        }
-        prep = pp.PrepPipeline(data, prep_params, data.get_montage())
-        prep.fit()
+        data.drop_channels(['BLANK'], on_missing='warn')
         
+        # ATTEMPT AT USING pyprep BUT IT WAS REJECTING CHANNELS THAT VISIBLY WERE NOT BAD
+        # SHOULD BE TRIED AGAIN BY PLAYING WITH THE ARGUMENTS FOR THE pyprep.PrepPipeline
+        # FUNCTION CALL, OR BY USING THE pyprep.NoisyChannels CLASS
+        # data.set_channel_types({'X': 'eog', 'Y': 'eog'})
+        # filtered_data = data.copy().filter(lowfrq, hifrq)
+        # filtered_data.notch_filter(60, filter_length='auto', phase='zero')
+        # prep_params = {
+        #     "ref_chs": "eeg",
+        #     "reref_chs": "eeg",
+        #     "line_freqs": np.arange(60, int(data.info['sfreq']) / 2, 60),
+        # }
+        # prep = pp.PrepPipeline(filtered_data, prep_params, filtered_data.get_montage())
+        # prep.fit()
+        # print("Bad channels: {}".format(prep.interpolated_channels))
+        # print("Bad channels original: {}".format(prep.noisy_channels_original["bad_all"]))
+        # print("Bad channels after interpolation: {}".format(prep.still_noisy_channels))
+        # filtered_data.plot()
+        
+        channels = data.ch_names
         info = data.info
         # WE EXCLUDE THE BLANK CHANNEL AND RELABEL CHANNEL TYPES OF THE TWO EYE CHANNELS TO eog
         # ASSUMES THAT ALL CHANNELS ARE LABELED AS EEG WHETHER THEY ARE OR NOT
-        data.set_channel_types({'X': 'eog', 'Y': 'eog'})
+        for ch in eye_blink_chans:
+            if ch in channels:
+                data.set_channel_types({ch: 'eog'})
         # HOWEVER THE Y CHANNEL IS OFTEN FLAT SO THIS NEXT LINE IS OPTIONAL FOR DEBUG
+        # WOULD BE NICE TO HAVE A FLAT CHANNEL DETECTOR THAT WORKS WELL UNLIKE pyprep ABOVE
         # data.info['bads'] = ['BLANK']
         # IN CASE YOU WANT TO SEE WHAT THE CHANNEL TYPE ASSIGNMENTS ARE JUST RUN LINE OF CODE BELOW
         # for i in range(len(info['chs'])): print([str(i) + ' ' + str(filtered_data.info['chs'][i]['kind'])])
         
-        channels = data.ch_names
         # ******************** EEG SCREENING FOR BAD CHANNELS BEFORE ARTIFACT IDENTIFICATION AND REMOVAL
         # for ch in channels:
         #     # SIMPLE WAY TO EXCLUDE FLAT CHANNELS ALTHOUGH SOME CHANNELS CAN BE 
         #     # FLAT BUT HAVE FEW ACTUAL ZEROS IN THE SIGNAL
         #     percZeros = len(np.where(data.get_data([ch])[0]==0))/len(data.get_data([ch])[0])
         #     if percZeros>=maxZeroPerc:
-        #         data.set_channel_types({ch: 'bads'})
-        
+        #         data.set_channel_types({ch: 'bads'})        
         
         # WE WANT TO EXCLUDE ANY CHANNELS THAT AREN'T EEG OR eog JUST IN CASE WE HAVE ANY THERE
-        eeg_indices = mne.pick_types(info, meg=False, eeg=True, ecg=False, eog=True, exclude=['bads', 'BLANK'])
+        eeg_indices = mne.pick_types(info, meg=False, eeg=True, ecg=False, eog=True, exclude=['bads'])
         mne.pick_info(info, eeg_indices, copy=False)
         # NOW WE GET SAMPLE RATE AND CHANNEL INFO
         samp_freq = int(info['sfreq'])  # sample rate (Hz)
@@ -169,66 +185,94 @@ if do_filter_eeg_signal_cnt:
         # LOW AND HIGH PASS FILTERING THAT SATISFIES ZERO-PHASE DESIGN
         filtered_data = data.copy().filter(lowfrq, hifrq)
         # REMOVE 60 HZ LINE NOISE FROM SIGNAL WITH NOTCH FILTER
-        filtered_data.notch_filter(60, filter_length='auto', phase='zero')
+        filtered_data.notch_filter(60, filter_length='auto', phase='zero', verbose=False)
         # WE NEED TO APPLY A COMMON AVERAGE REFERENCE TO USE MNE-ICALabel
         # UNCLEAR WHETHER AVERAGE SHOULD INCLUDE OR EXCLUDE THE EYE CHANNELS 
         # ALSO, WE WANT TO EXCLUDE BAD CHANNELS BEFORE THIS STEP SO WE MUST 
         # HAVE A PRELIMINARY CHECK OF CONSPICUOUSLY BAD CHANNELS            
         
-        # SETS AVERAGE REFERENCE BUT DO WE NEED TO DE-REFERENCE BEFORE THIS STEP?
+        # SETS AVERAGE REFERENCE 
         filtered_data = filtered_data.set_eeg_reference("average")
+        
         # NOW WE DO ICA FOR ARTIFACT REMOVAL
         # UNCLEAR WHETHER EYE CHANNELS SHOULD BE INCLUDED OR NOT IN ICA
         ica = ICA(
-            n_components=15,
+            n_components=0.99,
             max_iter="auto",
-            method="infomax",
             random_state=42,
+            method="infomax",
             fit_params=dict(extended=True),
+            verbose=False
         )
         ica.fit(filtered_data)
+        # IN AN ATTEMPT TO IMPROVE THE EYE BLINK IDENTIFICATION I TRIED USING THE 
+        # create_eog_epochs FUNCTION AND IT FOUND NO EYE BLINKS EVEN THOUGH THE 
+        # EOG MATCHED ALMOST PERFECTLY ONE OF THE ICs SO ABANDONING FOR NOW
+        # eog_epochs = create_eog_epochs(filtered_data,
+        #                                flat={'eog': 250e-6}
+        #                                )
+        
         # SINCE ica HAS THE EOG CHANNEL LABELED AS EEG (THIS CAN BE CONFIRMED WITH 
         # ica.get_channel_types() AT THE CONSOLE) THE PREDICTION FROM mne_icalabel 
         # LABELS WHAT IS CLEARLY EYE BLINK COMPONENT AS BRAIN SO HERE WE ARE USING THE 
         # find_bads_eog FUNCTION TO FIND THE MOST LIKELY EYE BLINK IC AND EXCLUDES IT
-        eog_indices, eog_scores = ica.find_bads_eog(filtered_data)
-        ica.exclude = eog_indices
+        # BUT FIRST WE NEED TO SEE WHETHER THERE ARE ANY eog CHANNELS IN data AND
+        # IF NOT THEN WE USE THE FRONTAL POLAR CHANNELS FOR EYE BLINK DETECTION
+        if 'eog' not in data.get_channel_types():
+            eog_indices, eog_scores = ica.find_bads_eog(filtered_data,
+                                                        ch_name=['FP1', 'FP2'],
+                                                        verbose=False
+                                                        )
+        else:
+            eog_indices, eog_scores = ica.find_bads_eog(filtered_data,
+                                                        verbose=False
+                                                        )
+
+        # THIS SECTION EMPLOYS THE mne-icalabels AND IS ALSO BEING LEFT ALONE FOR NOW
+        # BECAUSE IT ALSO MISSED CONSPICUOUSLY REAL ICs FOR EYE BLINKS HOWEVER
+        # WE COMBINE THE NON-BRAIN ICs FROM BOTH eog_indices AND exclude_idx
         # NOW WE GET THE PREDICTED CLASSIFICATIONS OF THE REMAINING INDEPENDENT COMPONENTS 
         ic_labels = label_components(filtered_data, ica, method="iclabel")
         labels = ic_labels["labels"]
         # TO PRINT OUT LIST OF LABELS BY INDEX FOR QUICK INTERPRETATION OF IC PLOT
-        for i in range(len(labels)): print([str(i) + ' ' + labels[i]])
+        # for i in range(len(labels)): print([str(i) + ' ' + labels[i]])
+        
         # THEN EXCLUDE ANY ICs THAT ARE NOT CLASSIFIED AS 'BRAIN' OR 'OTHER'
         exclude_idx = [idx for idx, label in enumerate(labels) if label not in ["brain", "other"]]
+        
         # AND FINALLY WE RECONSTRUCT THE SIGNAL USING THE INCLUDED ICs
-        reconst_data = filtered_data.copy()
-        ica.apply(reconst_data, exclude=exclude_idx)
+        # reconst_data = filtered_data.copy()
+        # COMBINING ALL NON-BRAIN ICs AND REMOVING THEM
+        ic_to_remove = [*set(exclude_idx + eog_indices)]
+        ica.exclude = ic_to_remove
+        ica.apply(filtered_data)
+        
         # # TO DISPLAY THE CHANNEL PSDs, RAW DATA AND INDEPENDENT COMPONENTS
         # filtered_data.plot()
         # data.plot_psd()
         # filtered_data.plot_psd()
-        # x = reconst_data.get_data(['X'])[0]
-        # dx = sp.diff(x)
-        # y = reconst_data.get_data(['Y'])[0]
-        # dy = sp.diff(y)
         
         # # UNCOMMENT THE NEXT THREE LINES TO GET PLOTS OF ICs, AND BEFORE AND AFTER RECONSTRUCTION OF SIGNALS
-        ica.plot_sources(filtered_data, show_scrollbars=False, show=True)
-        filtered_data.plot(show_scrollbars=False, title='filtered')
-        reconst_data.plot(show_scrollbars=False, title='reconstr')
+        # ica.plot_sources(filtered_data, show_scrollbars=False, show=True)
+        # filtered_data.plot(show_scrollbars=False, title='filtered')
+        # reconst_data.plot(show_scrollbars=False, title='reconstr')
+        
         for ch in channels:
             # NOW WE EXTRACT FILTERED SIGNAL FROM EACH CHANNEL AND SAVE IT IN .CSV FILE
             # AND AS .PNG, THE FORMER FOR USE IN MWT, AND THE LATTER FOR VISUAL INSPECTION
             fname = fname.replace('.','_')
             print(ch + ', '  + ' -- ' + fname[:-4])
-            this_chan = reconst_data.get_data([ch])[0]
+            this_chan = filtered_data.get_data([ch])[0]
             datFN = ch + '_' + fname + '_' + str(samp_freq) + '.csv'
-            np.savetxt(eeg_dir + datFN, this_chan.T , delimiter=',', header=ch, comments='')
+            np.savetxt(eeg_dir + 'cleaned_data\\' + datFN, this_chan.T , delimiter=',', header=ch, comments='')
+            # THIS CONTROLS WHETHER CHANNEL PLOTS ARE GENERATED OR NOT
             if do_plot_channels:
                 figFN = ch + '_' + fname[:-4] + '_' + str(samp_freq) + '.png'
                 plt.plot(this_chan)
+                # plt.ylim((-50/1000000),(50/1000000))
                 plt.title(ch + ', ' + cntList[f][0][-2:] + ' -- ' + fname[:-4])
-                plt.savefig(base_dir + 'eeg_figures\\' + figFN)
+                # plt.show()
+                plt.savefig(eeg_dir + 'eeg_figures\\' + figFN)
                 plt.clf()
 
 if do_pac:    
