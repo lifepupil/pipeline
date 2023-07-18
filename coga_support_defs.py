@@ -142,4 +142,32 @@ def get_diagnosis(srow, visit_list, thisVisit, dx, int_dx):
         dx_then = False
         dx_visits_ago = 999
     return [dx_then, dx_now, dx_visits_ago]
+
+def remove_completed_files_from_list(cntList, completedPath):
+    # N.B. - IF EVEN ONE CSV FILE OF CHANNEL DATA IS WRITTEN FOR A SUBJECT VISIT
+    # THEN THIS WILL EXCLUDE THAT SUBJECT VISIT FROM BEING FULLY PROCESSED. SO 
+    # IF MANUALLY STOPPING CODE THEN DO SO BETWEEN WRITING EVENTS - THESE EVENTS  
+    # CAN BE READILY SEEN IN THE CONSOLE FYI
+    import os
+    # FIRST WE GET A LIST ONLY OF THE FILE NAMES. SINCE ALL FILENAMES ARE UNIQUE
+    # REGARDLESS OF WHICH SITE THEY ARE COLLECTED WE ONLY HAVE TO COMPARE FILENAMES
+    cntListFN = [f[1] for f in cntList]
+    # WE WANT TO SEE WHAT SUBJECT FILES HAVE ALREADY BEEN PROCESSED SO WE FIRST GET ALL OUTPUT FILES
+    completedList = os.listdir(completedPath)
+    # NEXT WE REMOVE CHANNEL AND FILE EXTENSION FROM EACH 
+    splitCompletedList = [str.split(fn,'_') for fn in completedList]
+    # THEN WE REJOIN CORE FILE NAMES WITH THE APPROPRIATE EXTENSION IN THIS CASE, .cnt (LOWER CASE)
+    coreCompletedList = ['_'.join(f[1:len(f)-2])+'.cnt' for f in splitCompletedList]
+    # NOW WE REMOVE DUPLICATE CNT FILE NAMES
+    coreCompletedList = set(coreCompletedList)
+    # NEXT WE DETERMINE WHICH CNT FILE NAMES ARE IN BOTH
+    isect = set(cntListFN).intersection(coreCompletedList)
+    # THEN GET THE INDICES OF THE FILES FROM coreCompletedList THAT ARE ALSO IN cntList
+    completed_idx = [cntListFN.index(i) for i in isect]
+    # FINALLY WE REMOVE THEM FROM cntList WHICH SHOULD BE IDENTICAL TO THE INDICES 
+    # FOR THE cntListFN LIST
+    cntList = [f for i, f in enumerate(cntList) if i not in completed_idx]
+    # WE GET THE TOTAL NUMBER OF FILES TO PROCESS SO WE CAN PROVIDE INFORMATION 
+    # IN THE CONSOLE ABOUT HOW MANY FILES ARE LEFT TO PROCESS
+    return cntList
         

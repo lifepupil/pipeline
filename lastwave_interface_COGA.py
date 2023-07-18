@@ -41,7 +41,7 @@ do_filter_eeg_signal_cnt = True    # TO DO LOW PASS, HIGH PASS, NOTCH FILTER TO 
 do_pac = False                      # PHASE AMPLITUDE COUPLING USING TENSORPAC
 
 # PARAMETERS
-base_dir = "E:\\Documents\\COGA_eec\\"
+base_dir = "E:\\Documents\\COGA_eec\\data\\"
 eeg_dir = "C:\\Users\\lifep\\Documents\\COGA_eec\\"
     
 # PARAMETERS FOR do_pac PHASE AMPLITUDE COUPLING USING TENSORPAC
@@ -101,6 +101,7 @@ if do_filter_eeg_signal_cnt:
     do_plot_channels = True # TO GENERATE PLOTS OF THE CLEANED EEG SIGNAL
     mpl.rcParams['figure.dpi'] = 300 # DETERMINES THE RESOLUTION OF THE EEG PLOTS
     eye_blink_chans = ['X', 'Y'] # NAMES OF CHANNELS CONTAINING EOG
+    institutionDir = 'suny' # WE'RE GOING DIRECTORY BY DIRECTORY TO PREVENT HARD DISK FROM FILLING COMPLETELY
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -115,15 +116,18 @@ if do_plot_eeg_signal_and_mwt:
 # TO FILTER SIGNALS THEN SAVE THEM IN CSV AND PNG FILES
 if do_filter_eeg_signal_cnt:
     # GET ALL THE .CNT FILE NAMES AND PATHS AND PUT INTO LIST 
-    cntList = csd.get_file_list(base_dir, 'cnt')
+    cntList = csd.get_file_list(base_dir + institutionDir + '\\', 'cnt')
     # IN CASE THIS CODE HAS BEEN PARTIALLY RUN ON RAW DATA ALREADY
     # WE WANT TO FIND OUT WHAT OUTPUT FILES HAVE ALREADY BEEN GENERATED 
     # SO WE CAN EXCLUDE THEM FROM THE ORIGINAL LIST AND ONLY PROCESS RAW DATA
     # FILES THAT HAVEN'T YET BEEN PROCESSED. 
-    completedList = os.listdir(eeg_dir + 'cleaned_data\\')
+    # NOW WE REMOVE COMPLETED FILES FROM THE MAIN LIST OF FILES TO PROCESS, I.E., FROM cntList
+    cntList = csd.remove_completed_files_from_list(cntList, eeg_dir + 'cleaned_data\\')
+    totalFileCount = str(len(cntList))
     #  WE GO THROUGH EACH OF THE FILES IN cntList 
     for f in range(len(cntList)):
         fname = cntList[f][1]
+        print('\n\n\nWORKING ON ' + str(f+1) + ' OF THE ' + totalFileCount + ' CNT FILES\n' + fname + '\n\n')
         path_and_file = cntList[f][0] + '\\' + fname
         try:
             data = mne.io.read_raw_cnt(path_and_file, preload=True, verbose=False)
@@ -197,7 +201,7 @@ if do_filter_eeg_signal_cnt:
         # NOW WE DO ICA FOR ARTIFACT REMOVAL
         # UNCLEAR WHETHER EYE CHANNELS SHOULD BE INCLUDED OR NOT IN ICA
         ica = ICA(
-            n_components=0.99,
+            n_components=15,
             max_iter="auto",
             random_state=42,
             method="infomax",
