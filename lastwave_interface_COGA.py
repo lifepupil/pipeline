@@ -234,8 +234,8 @@ if do_filter_eeg_signal_cnt:
 
         # THIS SECTION EMPLOYS THE mne-icalabels AND IS ALSO BEING LEFT ALONE FOR NOW
         # BECAUSE IT ALSO MISSED CONSPICUOUSLY REAL ICs FOR EYE BLINKS HOWEVER
-        # WE COMBINE THE NON-BRAIN ICs FROM BOTH eog_indices AND exclude_idx
-        # NOW WE GET THE PREDICTED CLASSIFICATIONS OF THE REMAINING INDEPENDENT COMPONENTS 
+        # WE COMBINE THE NON-BRAIN ICs FROM BOTH eog_indices AND exclude_idx TO 
+        # COVER ALL POSSIBLE NON-BRAIN ARTIFACTS FOR REMOVAL
         ic_labels = label_components(filtered_data, ica, method="iclabel")
         labels = ic_labels["labels"]
         # TO PRINT OUT LIST OF LABELS BY INDEX FOR QUICK INTERPRETATION OF IC PLOT
@@ -251,7 +251,7 @@ if do_filter_eeg_signal_cnt:
         ica.exclude = ic_to_remove
         ica.apply(filtered_data)
         
-        # # TO DISPLAY THE CHANNEL PSDs, RAW DATA AND INDEPENDENT COMPONENTS
+        # # UNCOMMENT TO DISPLAY THE CHANNEL PSDs, RAW DATA AND INDEPENDENT COMPONENTS
         # filtered_data.plot()
         # data.plot_psd()
         # filtered_data.plot_psd()
