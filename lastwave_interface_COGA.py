@@ -37,8 +37,8 @@ import coga_support_defs as csd
 # INSTANCE VARIABLES
 do_sas_convert = False             # TO CONVERT .SAS7PDAT FILES TO TABLES SO THAT SUBJECT METADATA CAN BE USED DOWNSTREAM
 do_plot_eeg_signal_and_mwt = False # TO PLOT SIGNAL AND HEATMAP FOR A GIVEN FILE
-do_filter_eeg_signal_cnt = True    # TO DO LOW PASS, HIGH PASS, NOTCH FILTER TO REMOVE LINE NOISE FROM SIGNAL, AND ICA
-do_pac = False                      # PHASE AMPLITUDE COUPLING USING TENSORPAC
+do_filter_eeg_signal_cnt = False    # TO DO LOW PASS, HIGH PASS, NOTCH FILTER TO REMOVE LINE NOISE FROM SIGNAL, AND ICA
+do_pac = True                      # PHASE AMPLITUDE COUPLING USING TENSORPAC
 
 # PARAMETERS
 base_dir = "E:\\Documents\\COGA_eec\\data\\"
@@ -46,8 +46,8 @@ eeg_dir = "C:\\Users\\lifep\\Documents\\COGA_eec\\"
     
 # PARAMETERS FOR do_pac PHASE AMPLITUDE COUPLING USING TENSORPAC
 if do_pac:
-    pac_path = 'C:\\Users\\CRichard\\Documents\\COGA_eec\\tensorpac\\'
-    core_pheno_list = 'C:\\Users\\CRichard\\Documents\\COGA_sub_info\\core_pheno_20201120.csv'
+    pac_path = 'C:\\Users\\CRichard\\Documents\\COGA_eec\\tensorpac\\' 
+    core_pheno_list = 'C:\\Users\\lifep\\OneDrive\\Documents\\COGA_sub_info\\core_pheno_20201120.csv'
     # WHEN core_pheno FILE IS UPDATED WITH NEW INTERVIEW COLUMNS MUST ADD THEM HERE FOR CODE TO SCAN THROUGH ALL INTERVIEWS
     interview_col_names = ['intvw_p1', 
                            'intvw_p2', 
@@ -73,9 +73,9 @@ if do_pac:
     hisp_dict = {1: False, 5: True}
     
     chan_pos = 0
-    task_pos = 1
-    visit_pos = 3
-    id_pos = 4
+    task_pos = 0
+    visit_pos = 2
+    id_pos = 3
     
 # PARAMETERS FOR do_sas_convert
 if do_sas_convert:
@@ -101,7 +101,7 @@ if do_filter_eeg_signal_cnt:
     do_plot_channels = True # TO GENERATE PLOTS OF THE CLEANED EEG SIGNAL
     mpl.rcParams['figure.dpi'] = 300 # DETERMINES THE RESOLUTION OF THE EEG PLOTS
     eye_blink_chans = ['X', 'Y'] # NAMES OF CHANNELS CONTAINING EOG
-    institutionDir = 'suny' # WE'RE GOING DIRECTORY BY DIRECTORY TO PREVENT HARD DISK FROM FILLING COMPLETELY
+    institutionDir = 'washu' # suny, indiana, iowa, uconn, ucsd, washu
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -122,7 +122,7 @@ if do_filter_eeg_signal_cnt:
     # SO WE CAN EXCLUDE THEM FROM THE ORIGINAL LIST AND ONLY PROCESS RAW DATA
     # FILES THAT HAVEN'T YET BEEN PROCESSED. 
     # NOW WE REMOVE COMPLETED FILES FROM THE MAIN LIST OF FILES TO PROCESS, I.E., FROM cntList
-    cntList = csd.remove_completed_files_from_list(cntList, eeg_dir + 'cleaned_data\\')
+    cntList = csd.remove_completed_files_from_list(cntList, eeg_dir + 'cleaned_data\\', institutionDir)
     totalFileCount = str(len(cntList))
     #  WE GO THROUGH EACH OF THE FILES IN cntList 
     for f in range(len(cntList)):
@@ -135,8 +135,8 @@ if do_filter_eeg_signal_cnt:
             # data.plot()
             # a=1
         except Exception as e:
-            with open(base_dir + 'errors_from_core_pheno.txt', 'a') as f:
-                f.write(str(fname) + '\t ' + str(e) + '\n')
+            with open(base_dir + 'errors_from_core_pheno.txt', 'a') as bf:
+                bf.write(str(fname) + '\t ' + str(e) + '\n')
             continue                
         
         data.drop_channels(['BLANK'], on_missing='warn')
@@ -274,7 +274,7 @@ if do_filter_eeg_signal_cnt:
                 figFN = ch + '_' + fname[:-4] + '_' + str(samp_freq) + '.png'
                 plt.plot(this_chan)
                 # plt.ylim((-50/1000000),(50/1000000))
-                plt.title(ch + ', ' + cntList[f][0][-2:] + ' -- ' + fname[:-4])
+                plt.title(ch + ', ' + institutionDir.upper() + ' -- ' + fname[:-4])
                 # plt.show()
                 plt.savefig(eeg_dir + 'eeg_figures\\' + figFN)
                 plt.clf()
@@ -282,7 +282,7 @@ if do_filter_eeg_signal_cnt:
 if do_pac:    
     # GET A LIST OF ALL THE EEG FILES THAT HAVE BEEN EXTRACTED FROM .CNT FILES
     # AND HIGH/LOW PASS FILTERED
-    eegList = csd.get_file_list(eeg_dir, 'csv')
+    eegList = csd.get_file_list(base_dir, 'cnt')
     core_pheno = pd.read_csv(core_pheno_list)
     # SINCE VISIT INFORMATION IN THE FILE NAME IS DESIGNATED WITH LOWER CASE ALPHABET LETTERS
     # LET'S CREATE AN ALPHABET LIST
@@ -293,31 +293,55 @@ if do_pac:
     # META DATA AND TO CALCULATE PHASE AMPLITUDE COUPLING VALUES FOR DOWNSTREAM
     # ANALYSIS USING DEEP LEARNING NETWORKS AS WELL AS FOR TRADITIONAL STATISTICS
     for f in eegList:
-        # FIRST WE NEED TO EXTRACT INFO CONTAINED IN THE FILE NAME
+        # print(f[1])
+        # REMOVE THE FILE EXTENSION
+        f[1]  = f[1][0:-4]
+        # WE NEED TO EXTRACT INFO CONTAINED IN THE FILE NAME
         # EXAMPLE FILE NAME: 'F7_eec_3_d1_10037021_32_cnt_500.csv'
-        thisSub = int(csd.get_sub_from_fname(f[1], id_pos))
-        thisVisitCode = csd.get_sub_from_fname(f[1], visit_pos)[0]
+        thisSub = csd.get_sub_from_fname(f[1], id_pos)
+        # SINCE THERE ARE SOMETIMES SUBJECT INFO THAT DON'T CONTAIN ALL NUMBERS
+        # AND WE WANT TO IGNORE THOSE FILES WE HAVE THIS TEST BELOW
+        if any([x.isalpha() for x in thisSub]):
+            continue
+        else:
+            thisSub = int(thisSub)
+        thisVisitCode = csd.get_sub_from_fname(f[1], visit_pos)[0].lower()
         thisRun = csd.get_sub_from_fname(f[1], visit_pos)[1]
         thisTask = csd.get_sub_from_fname(f[1], task_pos)
         thisChan = csd.get_sub_from_fname(f[1], chan_pos)
         
+        # THERE ARE VISITS THAT ARE LABELED WITH 'L' THAT DON'T FIT THE 
+        # FILENAMING CONVENTION THAT I WAS GIVEN INITIALLY SO FOR NOW
+        # WE ARE IGNORING .CNT FILES THAT HAVE 'L' FOR VISIT INFO
+        if thisVisitCode=='l':
+            with open(base_dir + 'errors_from_core_pheno.txt', 'a') as ff:
+                ff.write(str(thisSub) + '\ta LIFESPAN project visit \n')
+            continue
         # NEXT WE LOOK IN THE core_pheno TABLE TO LOOK UP THE SUBJECT ID FROM THE EEG FILE NAME
         # THE srow DATAFRAME CONTAINS MOST OF THE INFO WE NEED FOR COGA ANALYSIS PURPOSES
         srow = core_pheno[core_pheno['ID'] == thisSub]
         # IT IS POSSIBLE THAT THERE IS NO ENTRY FOR A SUBJECT SO WE WANT TO SKIP IF THERE ISN'T ONE IN core_pheno
         if len(srow) == 0:
             with open(base_dir + 'errors_from_core_pheno.txt', 'a') as ff:
-                ff.write(str(thisSub) + '\t MISSING FROM core_pheno \n')
+                ff.write(str(thisSub) + '\tMISSING FROM core_pheno \n')
             continue
         # GET TOTAL NUMBER OF VISITS BY COUNTING THE NUMBER OF FIVES IN THE INTERVIEW COLUMNS. WE DO THIS TO BE
         # DYNAMICALLY COMPATIBLE WITH FUTURE VERSIONS OF core_pheno FILE
         interview_columns = np.where(np.isin(srow.columns, interview_col_names))[0]
         # WE MAKE A LIST OF BOOLEANS FOR ALL INTERVIEW VISITS THAT HAVE OCCURRED FOR THIS SUBJECT, 1=FALSE, 5=TRUE
-        which_visits = srow.iloc[0, interview_columns] == 5
+        which_visits = srow.iloc[0, interview_columns] == 5        
         # NOW USE THE BOOLEAN LIST TO GET THE COLUMN NAMES FOR THOSE INTERVIEW VISITS
         visit_list = [interview for (interview, visit_bool) in zip(interview_col_names, which_visits) if visit_bool]
         # ALL WE NEED ARE THE NUMERIC DESIGNATIONS OF INTERVIEW VISIT TYPES
         visit_list = [v.replace('intvw_p', '') for v in visit_list ]
+        # THERE IS AT LEAST ONE SUBJECT-VISIT THAT HAS AN ERROR IN core_pheno_20201120
+        # NAMELY eec_3_c1_30025017_32.cnt WHICH HAS NO ENTRY FOR FIRST VISIT IN 
+        # PHASE 4, I.E., intvw_p4 SO IN CASE OF THIS PROBLEM WE WILL WRITE INFO
+        # INTO THE ERROR LOG. THIS NEXT IF STATEMENT ONLY DEALS WITH PHASE 4 VISITS
+        if not which_visits['intvw_p4'] and any(which_visits[3:11]):
+            with open(base_dir + 'errors_from_core_pheno.txt', 'a') as ff:
+                ff.write(str(thisSub) + '\tFILENAME ' + f[1] + ' MISSING VISIT INFORMATION IN core_pheno\n')
+            continue 
         # NOW WE CAN MATCH UP THE VISIT INFORMATION FROM THE FILE NAME TO GET THE
         # CORRESPONDING NUMERIC VISIT DESIGNATION
         thisVisit = [visit_letters.index(thisVisitCode)][0]
@@ -333,7 +357,8 @@ if do_pac:
         except Exception as e:
             with open(base_dir + 'errors_from_core_pheno.txt', 'a') as ff:
                 ff.write(str(thisSub) + '\t' + str(e) + ' - FILENAME ' + f[1] + ' LISTED AS 2ND RECORDING WHEN ONLY 1 RECORDING IN core_pheno\n')
-            continue    
+            continue
+        
         thisVisitInterviewQuality = srow.iloc[0]['int_rating_p' + visit_list[thisVisit]]
         thisVisitAge = srow.iloc[0]['age_p' + visit_list[thisVisit]]
         
@@ -351,7 +376,7 @@ if do_pac:
         # WE CAN THEN COMPARE PHASE AMPLITUDE COUPLING IN EEG OF SUBJECTS WITH AUD
         #       COMPARED TO THOSE THAT DO NOT HAVE AUD
         
-    
+
         # FINALLY WE PUT ALL THE INFO AND PAC CALCULATIONS INTO A ONE ROW DATAFRAME 
         # TO ADD TO THE BIG DATAFRAME pacdat.
         df = pd.DataFrame({'ID': [srow.iloc[0]['ID']],
@@ -380,4 +405,8 @@ if do_pac:
                            })
         pacdat = pd.concat([pacdat, df])
     # FINALLY WE SAVE THE pacdat TABLE
-    pacdat.to_csv('C:\\Users\\CRichard\\Documents\\COGA_eec\\pacdat.csv', index=False)
+    pacdat.to_csv(base_dir + 'pacdat.csv', index=False)
+    
+    pacdat.drop(pacdat.iloc[:, 5:16], inplace=True, axis=1)
+    tbl = pacdat[pacdat.duplicated()]
+    tbl.to_csv(base_dir + 'pd.csv', index=False)

@@ -114,7 +114,6 @@ def do_pac(data):
                        fz_labels=18, fz_title=20, fz_cblabel=18)
 
     plt.tight_layout()
-
     plt.show()
     
 def get_sub_from_fname(whichSub, whichIndx):
@@ -128,7 +127,7 @@ def get_diagnosis(srow, visit_list, thisVisit, dx, int_dx):
         dx_now = True
 
         visit_of_dx_code = srow.iloc[0][int_dx].replace('_', '').replace('\'', '').replace('b', '').replace('C', '').replace('S', '')
-        visit_of_dx = visit_list.index(visit_of_dx_code)
+        visit_of_dx = visit_list.index(visit_of_dx_code)        
         # IN ORDER TO FIND VISITS TAKING PLACE BEFORE SUBJECTS DEVELOP AUD, ALCOHOL DEPENDENCE, OR ALCOHOL ABUSE
         # WE CALCULATE HOW MANY VISITS BEFORE DIAGNOSIS TO MAKE IT EASY TO FIND THEM DOWNSTREAM
         dx_visits_ago = visit_of_dx - thisVisit
@@ -143,7 +142,7 @@ def get_diagnosis(srow, visit_list, thisVisit, dx, int_dx):
         dx_visits_ago = 999
     return [dx_then, dx_now, dx_visits_ago]
 
-def remove_completed_files_from_list(cntList, completedPath):
+def remove_completed_files_from_list(cntList, completedPath, institutionDir):
     # N.B. - IF EVEN ONE CSV FILE OF CHANNEL DATA IS WRITTEN FOR A SUBJECT VISIT
     # THEN THIS WILL EXCLUDE THAT SUBJECT VISIT FROM BEING FULLY PROCESSED. SO 
     # IF MANUALLY STOPPING CODE THEN DO SO BETWEEN WRITING EVENTS - THESE EVENTS  
@@ -155,11 +154,14 @@ def remove_completed_files_from_list(cntList, completedPath):
     # WE WANT TO SEE WHAT SUBJECT FILES HAVE ALREADY BEEN PROCESSED SO WE FIRST GET ALL OUTPUT FILES
     completedList = os.listdir(completedPath)
     # NEXT WE REMOVE CHANNEL AND FILE EXTENSION FROM EACH 
-    splitCompletedList = [str.split(fn,'_') for fn in completedList]
     # THEN WE REJOIN CORE FILE NAMES WITH THE APPROPRIATE EXTENSION IN THIS CASE, .cnt (LOWER CASE)
-    coreCompletedList = ['_'.join(f[1:len(f)-2])+'.cnt' for f in splitCompletedList]
     # NOW WE REMOVE DUPLICATE CNT FILE NAMES
-    coreCompletedList = set(coreCompletedList)
+    coreCompletedList = _get_subject_list(completedList, True)
+    
+    # UNCOMMENT NEXT TWO LINE TO GET SUBJECT COUNT FOR METHODS SECTION
+    # subList = _get_subject_list(cntListFN, False)
+    # print(institutionDir + ': ' +  str(len(subList)) )
+
     # NEXT WE DETERMINE WHICH CNT FILE NAMES ARE IN BOTH
     isect = set(cntListFN).intersection(coreCompletedList)
     # THEN GET THE INDICES OF THE FILES FROM coreCompletedList THAT ARE ALSO IN cntList
@@ -171,3 +173,16 @@ def remove_completed_files_from_list(cntList, completedPath):
     # IN THE CONSOLE ABOUT HOW MANY FILES ARE LEFT TO PROCESS
     return cntList
         
+def _get_subject_list(thisList, removeChanBool):
+    # NEXT WE REMOVE CHANNEL AND FILE EXTENSION FROM EACH 
+    splitList = [str.split(fn,'_') for fn in thisList]
+    # THEN WE REJOIN CORE FILE NAMES WITH THE APPROPRIATE EXTENSION IN THIS CASE, .cnt (LOWER CASE)
+    # SINCE WE NEED TO REMOVE THE CHANNEL INFORMATION FROM THE coreCompletedList 
+    # BUT NOT cntListFN WE HAVE TO USE DIFFERENT RANGES WHEN DOING JOIN OPERATION
+    if removeChanBool:
+        coreList = ['_'.join(fn[1:len(fn)-2])+'.cnt' for fn in splitList]
+    else:
+        coreList = ['_'.join(fn[0:len(fn)-1])+'.cnt' for fn in splitList]
+    # NOW WE REMOVE DUPLICATE CNT FILE NAMES
+    coreList = set(coreList)
+    return coreList
