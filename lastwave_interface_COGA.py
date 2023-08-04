@@ -410,3 +410,11 @@ if do_pac:
     pacdat.drop(pacdat.iloc[:, 5:16], inplace=True, axis=1)
     tbl = pacdat[pacdat.duplicated()]
     tbl.to_csv(base_dir + 'pd.csv', index=False)
+    
+    csd.print_demo_vals(tbl)
+
+    
+    
+    
+    
+    

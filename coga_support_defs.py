@@ -186,3 +186,78 @@ def _get_subject_list(thisList, removeChanBool):
     # NOW WE REMOVE DUPLICATE CNT FILE NAMES
     coreList = set(coreList)
     return coreList
+
+def print_demo_vals(tbl):
+    num_m = len(tbl[tbl.sex=='M'])
+    num_f = len(tbl[tbl.sex=='F'])
+    num_w = len(tbl[tbl.race=='WHITE'])
+    num_ww = len(tbl.loc[(tbl['race']=='WHITE') & (tbl['hispanic']==False)])
+    num_wh = len(tbl.loc[(tbl['race']=='WHITE') & (tbl['hispanic']==True)])
+    num_b = len(tbl[tbl.race=='BLACK'])
+    num_bb = len(tbl.loc[(tbl['race']=='BLACK') & (tbl['hispanic']==False)])
+    num_bh = len(tbl.loc[(tbl['race']=='BLACK') & (tbl['hispanic']==True)])
+    num_o = len(tbl[tbl.race=='OTHER'])
+    num_oo = len(tbl.loc[(tbl['race']=='OTHER') & (tbl['hispanic']==False)])
+    num_oh = len(tbl.loc[(tbl['race']=='OTHER') & (tbl['hispanic']==True)])
+    num_a = len(tbl[tbl.race=='ASIAN'])
+    num_aa = len(tbl.loc[(tbl['race']=='ASIAN') & (tbl['hispanic']==False)])
+    num_ah = len(tbl.loc[(tbl['race']=='ASIAN') & (tbl['hispanic']==True)])
+    num_h = len(tbl.loc[(tbl['hispanic']==True)])
+    num_nh = len(tbl.loc[(tbl['hispanic']==False)])
+    num_su = len(tbl[tbl.site=='SUNY'])
+    num_io = len(tbl[tbl.site=='IOWA'])
+    num_iu = len(tbl[tbl.site=='IU'])
+    num_uc = len(tbl[tbl.site=='UCONN'])
+    num_sd = len(tbl[tbl.site=='UCSD'])
+    num_wu = len(tbl[tbl.site=='WASHU'])
+
+    prc_m = num_m/len(tbl)*100
+    prc_f = num_f/len(tbl)*100
+    prc_o = num_o/len(tbl)*100
+    prc_oo = num_oo/len(tbl)*100
+    prc_oh = num_oh/len(tbl)*100
+    prc_a = num_a/len(tbl)*100
+    prc_aa = num_aa/len(tbl)*100
+    prc_ah = num_ah/len(tbl)*100
+    prc_b = num_b/len(tbl)*100
+    prc_bb = num_bb/len(tbl)*100
+    prc_bh = num_bh/len(tbl)*100
+    prc_w = num_w/len(tbl)*100
+    prc_ww = num_ww/len(tbl)*100
+    prc_wh = num_wh/len(tbl)*100
+    prc_h = num_h/len(tbl)*100
+    prc_nh = num_nh/len(tbl)*100
+
+    prc_su = num_su/len(tbl)*100
+    prc_io = num_io/len(tbl)*100
+    prc_iu = num_iu/len(tbl)*100
+    prc_uc = num_uc/len(tbl)*100
+    prc_sd = num_sd/len(tbl)*100
+    prc_wu = num_wu/len(tbl)*100
+
+    print('Males: ' + str(num_m) + ' (' + str(round(prc_m,1)) + ' %)')
+    print('Females: ' + str(num_f) + ' (' + str(round(prc_f,1)) + ' %)\n')
+    print('blacks: ' + str(num_b) + ' (' + str(round(prc_b,1)) + ' %)')
+    print('blacks non-hispanic: ' + str(num_bb) + ' (' + str(round(prc_bb,1)) + ' %)')
+    print('black hispanics: ' + str(num_bh) + ' (' + str(round(prc_bh,1)) + ' %)\n')
+    print('asians: ' + str(num_a) + ' (' + str(round(prc_a,1)) + ' %)')
+    print('asians non-hispanics: ' + str(num_aa) + ' (' + str(round(prc_aa,1)) + ' %)')
+    print('asian hispanics: ' + str(num_ah) + ' (' + str(round(prc_ah,1)) + ' %)\n')
+    print('whites: ' + str(num_w) + ' (' + str(round(prc_w,1)) + ' %)')
+    print('white non-hispanic: ' + str(num_ww) + ' (' + str(round(prc_ww,1)) + ' %)')
+    print('white hispanic: ' + str(num_wh) + ' (' + str(round(prc_wh,1)) + ' %)\n')
+    print('other: ' + str(num_o) + ' (' + str(round(prc_o,1)) + ' %)')
+    print('other non-hispanic: ' + str(num_oo) + ' (' + str(round(prc_oo,1)) + ' %)')
+    print('other hispanic: ' + str(num_oh) + ' (' + str(round(prc_oh,1)) + ' %)\n')
+    
+    print('non-hispanic: ' + str(num_h) + ' (' + str(round(prc_h,1)) + ' %)')
+    print('hispanic: ' + str(num_nh) + ' (' + str(round(prc_nh,1)) + ' %)\n')
+    
+    print('SUNY: ' + str(num_su) + ' (' + str(round(prc_su,1)) + ' %)')
+    print('IOWA: ' + str(num_io) + ' (' + str(round(prc_io,1)) + ' %)')
+    print('IU: ' + str(num_iu) + ' (' + str(round(prc_iu,1)) + ' %)')
+    print('UCONN: ' + str(num_uc) + ' (' + str(round(prc_uc,1)) + ' %)')
+    print('UCSD: ' + str(num_sd) + ' (' + str(round(prc_sd,1)) + ' %)')
+    print('WASHU: ' + str(num_wu) + ' (' + str(round(prc_wu,1)) + ' %)\n')
+    
+    print('TOTAL SAMPLE: ' + str(len(tbl)))
