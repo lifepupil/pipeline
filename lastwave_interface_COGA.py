@@ -14,21 +14,21 @@ Created on Thu Apr 27 15:59:34 2023
 # import required modules
 import pandas as pd
 import numpy as np
-from scipy import signal
-from scipy.signal import sosfiltfilt, butter
-import seaborn as sns
+# from scipy import signal
+# from scipy.signal import sosfiltfilt, butter
+# import seaborn as sns
 import string
-import statistics as stats
-import sympy as sp
-import pyprep as pp
+# import statistics as stats
+# import sympy as sp
+# import pyprep as pp
 
 import mne
-from mne.preprocessing import ICA, create_eog_epochs
-import torch
-import mne_icalabel as mica
+# from mne.preprocessing import ICA, create_eog_epochs
+# import torch
+# import mne_icalabel as mica
 from mne_icalabel import label_components
-import os
-import sys
+# import os
+# import sys
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import coga_support_defs as csd
