@@ -37,17 +37,35 @@ import coga_support_defs as csd
 # INSTANCE VARIABLES
 do_sas_convert = False             # TO CONVERT .SAS7PDAT FILES TO TABLES SO THAT SUBJECT METADATA CAN BE USED DOWNSTREAM
 do_plot_eeg_signal_and_mwt = False # TO PLOT SIGNAL AND HEATMAP FOR A GIVEN FILE
-do_filter_eeg_signal_cnt = False    # TO DO LOW PASS, HIGH PASS, NOTCH FILTER TO REMOVE LINE NOISE FROM SIGNAL, AND ICA
-do_pac = True                      # PHASE AMPLITUDE COUPLING USING TENSORPAC
+do_filter_eeg_signal_cnt = True    # TO DO LOW PASS, HIGH PASS, NOTCH FILTER TO REMOVE LINE NOISE FROM SIGNAL, AND ICA
+do_pac = False                      # PHASE AMPLITUDE COUPLING USING TENSORPAC
 
 # PARAMETERS
 base_dir = "E:\\Documents\\COGA_eec\\data\\"
-eeg_dir = "C:\\Users\\lifep\\Documents\\COGA_eec\\"
+write_dir = "D:\\COGA_eec\\"
     
 # PARAMETERS FOR do_pac PHASE AMPLITUDE COUPLING USING TENSORPAC
 if do_pac:
+    # TO GET SUBJECT-WISE STATS POINT source_dir TO A data FOLDER AND SET whichEEGfiles TO cnt
+    # OR TO GENERATE TABLE FOR EACH EEG CHANNEL FOR USE IN DEEP LEARNING NETWORKS THEN
+    # POINT source_dir TO A cleaned_data FOLDER AND SET whichEEGfiles TO cnt
+    whichEEGfiles = 'csv'
     pac_path = 'C:\\Users\\CRichard\\Documents\\COGA_eec\\tensorpac\\' 
     core_pheno_list = 'C:\\Users\\lifep\\OneDrive\\Documents\\COGA_sub_info\\core_pheno_20201120.csv'
+    
+    if whichEEGfiles=='csv':
+        source_dir = write_dir + "cleaned_data\\"
+        chan_pos = 0
+        task_pos = 1
+        visit_pos = 3
+        id_pos = 4
+    elif whichEEGfiles=='cnt':
+        source_dir = write_dir + "data\\"
+        chan_pos = 0
+        task_pos = 0
+        visit_pos = 2
+        id_pos = 3
+
     # WHEN core_pheno FILE IS UPDATED WITH NEW INTERVIEW COLUMNS MUST ADD THEM HERE FOR CODE TO SCAN THROUGH ALL INTERVIEWS
     interview_col_names = ['intvw_p1', 
                            'intvw_p2', 
@@ -71,11 +89,6 @@ if do_pac:
     sex_dict = {1: 'M', 2: 'F'}
     # AND CONVERT CODE FOR HISPANIC ETHNICITY (1=False, 5=True)
     hisp_dict = {1: False, 5: True}
-    
-    chan_pos = 0
-    task_pos = 0
-    visit_pos = 2
-    id_pos = 3
     
 # PARAMETERS FOR do_sas_convert
 if do_sas_convert:
@@ -101,7 +114,7 @@ if do_filter_eeg_signal_cnt:
     do_plot_channels = True # TO GENERATE PLOTS OF THE CLEANED EEG SIGNAL
     mpl.rcParams['figure.dpi'] = 300 # DETERMINES THE RESOLUTION OF THE EEG PLOTS
     eye_blink_chans = ['X', 'Y'] # NAMES OF CHANNELS CONTAINING EOG
-    institutionDir = 'washu' # suny, indiana, iowa, uconn, ucsd, washu
+    institutionDir = 'uconn' # suny, indiana, iowa, uconn, ucsd, washu
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -122,7 +135,7 @@ if do_filter_eeg_signal_cnt:
     # SO WE CAN EXCLUDE THEM FROM THE ORIGINAL LIST AND ONLY PROCESS RAW DATA
     # FILES THAT HAVEN'T YET BEEN PROCESSED. 
     # NOW WE REMOVE COMPLETED FILES FROM THE MAIN LIST OF FILES TO PROCESS, I.E., FROM cntList
-    cntList = csd.remove_completed_files_from_list(cntList, eeg_dir + 'cleaned_data\\', institutionDir)
+    cntList = csd.remove_completed_files_from_list(cntList, write_dir + 'cleaned_data\\', institutionDir)
     totalFileCount = str(len(cntList))
     #  WE GO THROUGH EACH OF THE FILES IN cntList 
     for f in range(len(cntList)):
@@ -268,7 +281,7 @@ if do_filter_eeg_signal_cnt:
             print(ch + ', '  + ' -- ' + fname[:-4])
             this_chan = filtered_data.get_data([ch])[0]
             datFN = ch + '_' + fname + '_' + str(samp_freq) + '.csv'
-            np.savetxt(eeg_dir + 'cleaned_data\\' + datFN, this_chan.T , delimiter=',', header=ch, comments='')
+            np.savetxt(write_dir + 'cleaned_data\\' + datFN, this_chan.T , delimiter=',', header=ch, comments='')
             # THIS CONTROLS WHETHER CHANNEL PLOTS ARE GENERATED OR NOT
             if do_plot_channels:
                 figFN = ch + '_' + fname[:-4] + '_' + str(samp_freq) + '.png'
@@ -276,23 +289,25 @@ if do_filter_eeg_signal_cnt:
                 # plt.ylim((-50/1000000),(50/1000000))
                 plt.title(ch + ', ' + institutionDir.upper() + ' -- ' + fname[:-4])
                 # plt.show()
-                plt.savefig(eeg_dir + 'eeg_figures\\' + figFN)
+                plt.savefig(write_dir + 'eeg_figures\\' + figFN)
                 plt.clf()
 
 if do_pac:    
-    # GET A LIST OF ALL THE EEG FILES THAT HAVE BEEN EXTRACTED FROM .CNT FILES
-    # AND HIGH/LOW PASS FILTERED
-    eegList = csd.get_file_list(base_dir, 'cnt')
+    # GET A LIST OF ALL THE .CSV FILES OF SUBJECT-VISIT-EEG CHANNELS 
+    # THAT HAVE BEEN EXTRACTED FROM .CNT FILES AND HIGH/LOW PASS FILTERED
+    # OR CAN USE TO GENERATE INFO TABLE FROM .CNT FILES BY PASSING 'cnt' INSTEAD OF 'csv'
+    eegList = csd.get_file_list(source_dir, whichEEGfiles)
     core_pheno = pd.read_csv(core_pheno_list)
     # SINCE VISIT INFORMATION IN THE FILE NAME IS DESIGNATED WITH LOWER CASE ALPHABET LETTERS
     # LET'S CREATE AN ALPHABET LIST
     visit_letters = list(string.ascii_lowercase)
     # NOW WE CREATE A DATAFRAME TO PUT VALUES INTO FOR DOWNSTREAM ANALYSIS AND/OR MACHINE LEARNING
     pacdat = pd.DataFrame()
-    # WE GO THROUGH EACH OF THE EEG FILES FOUND AT eeg_path TO COLLECT ALL RELEVANT
+    # WE GO THROUGH EACH OF THE EEG FILES FOUND AT base_dir TO COLLECT ALL RELEVANT
     # META DATA AND TO CALCULATE PHASE AMPLITUDE COUPLING VALUES FOR DOWNSTREAM
     # ANALYSIS USING DEEP LEARNING NETWORKS AS WELL AS FOR TRADITIONAL STATISTICS
     for f in eegList:
+        # f = eegList[3886]
         # print(f[1])
         # REMOVE THE FILE EXTENSION
         f[1]  = f[1][0:-4]
@@ -320,6 +335,7 @@ if do_pac:
         # NEXT WE LOOK IN THE core_pheno TABLE TO LOOK UP THE SUBJECT ID FROM THE EEG FILE NAME
         # THE srow DATAFRAME CONTAINS MOST OF THE INFO WE NEED FOR COGA ANALYSIS PURPOSES
         srow = core_pheno[core_pheno['ID'] == thisSub]
+        # ALL IDs IN core_pheno ARE UNIQUE SO NO POSSIBILITY OF THERE BEING len(srow) > 1
         # IT IS POSSIBLE THAT THERE IS NO ENTRY FOR A SUBJECT SO WE WANT TO SKIP IF THERE ISN'T ONE IN core_pheno
         if len(srow) == 0:
             with open(base_dir + 'errors_from_core_pheno.txt', 'a') as ff:
@@ -336,8 +352,9 @@ if do_pac:
         visit_list = [v.replace('intvw_p', '') for v in visit_list ]
         # THERE IS AT LEAST ONE SUBJECT-VISIT THAT HAS AN ERROR IN core_pheno_20201120
         # NAMELY eec_3_c1_30025017_32.cnt WHICH HAS NO ENTRY FOR FIRST VISIT IN 
-        # PHASE 4, I.E., intvw_p4 SO IN CASE OF THIS PROBLEM WE WILL WRITE INFO
-        # INTO THE ERROR LOG. THIS NEXT IF STATEMENT ONLY DEALS WITH PHASE 4 VISITS
+        # PHASE 4, I.E., intvw_p4. THERE ARE FOUR FILES FROM THAT SUBJECT: 
+        # b1, c1, d1, AND l1 SO FOR NOW WE JUST WRITE INFO INTO THE ERROR LOG. 
+        # THIS NEXT IF STATEMENT ONLY DEALS WITH PHASE 4 VISITS
         if not which_visits['intvw_p4'] and any(which_visits[3:11]):
             with open(base_dir + 'errors_from_core_pheno.txt', 'a') as ff:
                 ff.write(str(thisSub) + '\tFILENAME ' + f[1] + ' MISSING VISIT INFORMATION IN core_pheno\n')
@@ -363,7 +380,7 @@ if do_pac:
         thisVisitAge = srow.iloc[0]['age_p' + visit_list[thisVisit]]
         
         # DETERMINE WHETHER SUBJECT HAS BEEN DIAGNOSED WITH ALCOHOLISM TYPES
-        # IF ald5dx THEN PROCESS ald5_first_whint
+        # IF ald5dx THEN PROCESS ald5_first_whint 
         [aud_then, aud_now, aud_visits_ago] = csd.get_diagnosis(srow, visit_list, thisVisit, 'ald5dx', 'ald5_first_whint')
         # IF alc_abuse THEN PROCESS alab_first_whint
         [alab_then, alab_now, alab_visits_ago] = csd.get_diagnosis(srow, visit_list, thisVisit, 'alc_abuse', 'alab_first_whint')
@@ -404,14 +421,31 @@ if do_pac:
 
                            })
         pacdat = pd.concat([pacdat, df])
+        
+    # # TO LOAD THE FILE FOR DEBUG
+    # pacdat = pd.read_csv(base_dir + 'pacdat.csv')
+    
+    # WE SORT THE DATAFRAME FOR HUMAN READABILITY
+    pacdat = pacdat.sort_values(by='ID')
+    
+    # WE ADD A COLUMN TO SEPARATE ALCOHOLICS NOW FROM CONTROLS NOW FOR DEMOGRAPHICS INFO
+    pacdat['alcoholic'] = pacdat.apply(lambda r: any([r['AUD_now'], r['ALAB_now'],r['ALD_now']]), axis=1)
+    # pacdat['last_age'] = pacdat.apply(lambda r: r['age_this_visit'] if r['this_visit']==r['total_visits'] else 0, axis=1)
+    # pacdat['first_age'] = pacdat.apply(lambda r: r['age_this_visit'] if r['this_visit']==1 else 0, axis=1)
+    # pacdat['second_age'] = pacdat.apply(lambda r: r['age_this_visit'] if r['this_visit']==2 else 0, axis=1)
+    
     # FINALLY WE SAVE THE pacdat TABLE
-    pacdat.to_csv(base_dir + 'pacdat.csv', index=False)
-    
-    pacdat.drop(pacdat.iloc[:, 5:16], inplace=True, axis=1)
-    tbl = pacdat[pacdat.duplicated()]
-    tbl.to_csv(base_dir + 'pd.csv', index=False)
-    
-    csd.print_demo_vals(tbl)
+    pacdat.to_csv(write_dir + 'pacdat_' + institutionDir + '.csv', index=False)
+
+    if whichEEGfiles=='cnt':
+        # NOW WE EXECUTE THIS CODE TO GET DEMOGRAPHICS FROM SUBJECTS
+        tbl = pacdat.copy()
+        # WE REMOVE ANY COLUMNS THAT WOULD PREVENT REMOVAL ALL DUPLICATES FOR A GIVEN SUBJECT
+        tbl.drop(tbl.iloc[:, 5:22], inplace=True, axis=1)
+        # tbl = tbl.loc[tbl['first_age']>0]
+        tbl = tbl.drop_duplicates()
+        tbl.to_csv(base_dir + 'pd.csv', index=False)
+        csd.print_demo_vals(tbl)
 
     
     

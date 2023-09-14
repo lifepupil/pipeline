@@ -188,6 +188,7 @@ def _get_subject_list(thisList, removeChanBool):
     return coreList
 
 def print_demo_vals(tbl):
+    # COUNTS BY SEX, RACE, HISPANIC, AND SITE OF DATA ACQUISITION
     num_m = len(tbl[tbl.sex=='M'])
     num_f = len(tbl[tbl.sex=='F'])
     num_w = len(tbl[tbl.race=='WHITE'])
@@ -210,7 +211,10 @@ def print_demo_vals(tbl):
     num_uc = len(tbl[tbl.site=='UCONN'])
     num_sd = len(tbl[tbl.site=='UCSD'])
     num_wu = len(tbl[tbl.site=='WASHU'])
+    num_alc = len(tbl[tbl.alcoholic==True])
+    num_ctl = len(tbl[tbl.alcoholic==False])
 
+    # PERCENTAGES OF THE ABOVE
     prc_m = num_m/len(tbl)*100
     prc_f = num_f/len(tbl)*100
     prc_o = num_o/len(tbl)*100
@@ -227,14 +231,16 @@ def print_demo_vals(tbl):
     prc_wh = num_wh/len(tbl)*100
     prc_h = num_h/len(tbl)*100
     prc_nh = num_nh/len(tbl)*100
-
     prc_su = num_su/len(tbl)*100
     prc_io = num_io/len(tbl)*100
     prc_iu = num_iu/len(tbl)*100
     prc_uc = num_uc/len(tbl)*100
     prc_sd = num_sd/len(tbl)*100
     prc_wu = num_wu/len(tbl)*100
+    prc_alc = num_alc/len(tbl)*100
+    prc_ctl = num_ctl/len(tbl)*100
 
+    # SEND RESULTS TO CONSOLE
     print('Males: ' + str(num_m) + ' (' + str(round(prc_m,1)) + ' %)')
     print('Females: ' + str(num_f) + ' (' + str(round(prc_f,1)) + ' %)\n')
     print('blacks: ' + str(num_b) + ' (' + str(round(prc_b,1)) + ' %)')
@@ -250,8 +256,8 @@ def print_demo_vals(tbl):
     print('other non-hispanic: ' + str(num_oo) + ' (' + str(round(prc_oo,1)) + ' %)')
     print('other hispanic: ' + str(num_oh) + ' (' + str(round(prc_oh,1)) + ' %)\n')
     
-    print('non-hispanic: ' + str(num_h) + ' (' + str(round(prc_h,1)) + ' %)')
-    print('hispanic: ' + str(num_nh) + ' (' + str(round(prc_nh,1)) + ' %)\n')
+    print('hispanic: ' + str(num_h) + ' (' + str(round(prc_h,1)) + ' %)')
+    print('non-hispanic: ' + str(num_nh) + ' (' + str(round(prc_nh,1)) + ' %)\n')
     
     print('SUNY: ' + str(num_su) + ' (' + str(round(prc_su,1)) + ' %)')
     print('IOWA: ' + str(num_io) + ' (' + str(round(prc_io,1)) + ' %)')
@@ -260,4 +266,8 @@ def print_demo_vals(tbl):
     print('UCSD: ' + str(num_sd) + ' (' + str(round(prc_sd,1)) + ' %)')
     print('WASHU: ' + str(num_wu) + ' (' + str(round(prc_wu,1)) + ' %)\n')
     
+    print('alcoholic: ' + str(num_alc) + ' (' + str(round(prc_alc,1)) + ' %)')
+    print('control: ' + str(num_ctl) + ' (' + str(round(prc_ctl,1)) + ' %)\n')
+
+
     print('TOTAL SAMPLE: ' + str(len(tbl)))
