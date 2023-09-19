@@ -23,7 +23,7 @@ import string
 # import pyprep as pp
 
 import mne
-# from mne.preprocessing import ICA, create_eog_epochs
+from mne.preprocessing import ICA
 # import torch
 # import mne_icalabel as mica
 from mne_icalabel import label_components
@@ -37,29 +37,37 @@ import coga_support_defs as csd
 # INSTANCE VARIABLES
 do_sas_convert = False             # TO CONVERT .SAS7PDAT FILES TO TABLES SO THAT SUBJECT METADATA CAN BE USED DOWNSTREAM
 do_plot_eeg_signal_and_mwt = False # TO PLOT SIGNAL AND HEATMAP FOR A GIVEN FILE
-do_filter_eeg_signal_cnt = True    # TO DO LOW PASS, HIGH PASS, NOTCH FILTER TO REMOVE LINE NOISE FROM SIGNAL, AND ICA
-do_pac = False                      # PHASE AMPLITUDE COUPLING USING TENSORPAC
+do_filter_eeg_signal_cnt = False    # TO DO LOW PASS, HIGH PASS, NOTCH FILTER TO REMOVE LINE NOISE FROM SIGNAL, AND ICA
+do_pac = True                      # PHASE AMPLITUDE COUPLING USING TENSORPAC
 
 # PARAMETERS
 base_dir = "E:\\Documents\\COGA_eec\\data\\"
 write_dir = "D:\\COGA_eec\\"
     
+# specific frequency bands
+FREQ_BANDS = {"delta": [0.5, 4],
+              "theta": [4, 8],
+              "alpha": [8, 12],
+              "low_beta": [12, 20],
+              "high_beta": [20, 30],
+              'low_gamma': [30, 50]}
+
 # PARAMETERS FOR do_pac PHASE AMPLITUDE COUPLING USING TENSORPAC
 if do_pac:
-    # TO GET SUBJECT-WISE STATS POINT source_dir TO A data FOLDER AND SET whichEEGfiles TO cnt
+    # TO GET SUBJECT-WISE STATS POINT source_dir TO A data FOLDER AND SET whichEEGfileExtention TO cnt
     # OR TO GENERATE TABLE FOR EACH EEG CHANNEL FOR USE IN DEEP LEARNING NETWORKS THEN
-    # POINT source_dir TO A cleaned_data FOLDER AND SET whichEEGfiles TO cnt
-    whichEEGfiles = 'csv'
+    # POINT source_dir TO A cleaned_data FOLDER AND SET whichEEGfileExtention TO cnt
+    whichEEGfileExtention = 'csv'
     pac_path = 'C:\\Users\\CRichard\\Documents\\COGA_eec\\tensorpac\\' 
     core_pheno_list = 'C:\\Users\\lifep\\OneDrive\\Documents\\COGA_sub_info\\core_pheno_20201120.csv'
     
-    if whichEEGfiles=='csv':
+    if whichEEGfileExtention=='csv':
         source_dir = write_dir + "cleaned_data\\"
         chan_pos = 0
         task_pos = 1
         visit_pos = 3
         id_pos = 4
-    elif whichEEGfiles=='cnt':
+    elif whichEEGfileExtention=='cnt':
         source_dir = write_dir + "data\\"
         chan_pos = 0
         task_pos = 0
@@ -296,7 +304,7 @@ if do_pac:
     # GET A LIST OF ALL THE .CSV FILES OF SUBJECT-VISIT-EEG CHANNELS 
     # THAT HAVE BEEN EXTRACTED FROM .CNT FILES AND HIGH/LOW PASS FILTERED
     # OR CAN USE TO GENERATE INFO TABLE FROM .CNT FILES BY PASSING 'cnt' INSTEAD OF 'csv'
-    eegList = csd.get_file_list(source_dir, whichEEGfiles)
+    eegList = csd.get_file_list(source_dir, whichEEGfileExtention)
     core_pheno = pd.read_csv(core_pheno_list)
     # SINCE VISIT INFORMATION IN THE FILE NAME IS DESIGNATED WITH LOWER CASE ALPHABET LETTERS
     # LET'S CREATE AN ALPHABET LIST
@@ -393,6 +401,7 @@ if do_pac:
         # WE CAN THEN COMPARE PHASE AMPLITUDE COUPLING IN EEG OF SUBJECTS WITH AUD
         #       COMPARED TO THOSE THAT DO NOT HAVE AUD
         
+        freq_band_psds = csd.get_band_psds(f, FREQ_BANDS)
 
         # FINALLY WE PUT ALL THE INFO AND PAC CALCULATIONS INTO A ONE ROW DATAFRAME 
         # TO ADD TO THE BIG DATAFRAME pacdat.
@@ -417,8 +426,13 @@ if do_pac:
                            'ALAB_now': [alab_now],
                            'ALD_now': [ald_now],
                            'interview_quality': [thisVisitInterviewQuality],
-                           'eeg_file_name': [f[1]]
-
+                           'eeg_file_name': [f[1]],
+                           'delta': freq_band_psds[0],
+                           'theta': freq_band_psds[1],
+                           'alpha': freq_band_psds[2],
+                           'low_beta': freq_band_psds[3],
+                           'high_beta': freq_band_psds[4],
+                           'gamma': freq_band_psds[5]
                            })
         pacdat = pd.concat([pacdat, df])
         
@@ -437,7 +451,7 @@ if do_pac:
     # FINALLY WE SAVE THE pacdat TABLE
     pacdat.to_csv(write_dir + 'pacdat_' + institutionDir + '.csv', index=False)
 
-    if whichEEGfiles=='cnt':
+    if whichEEGfileExtention=='cnt':
         # NOW WE EXECUTE THIS CODE TO GET DEMOGRAPHICS FROM SUBJECTS
         tbl = pacdat.copy()
         # WE REMOVE ANY COLUMNS THAT WOULD PREVENT REMOVAL ALL DUPLICATES FOR A GIVEN SUBJECT

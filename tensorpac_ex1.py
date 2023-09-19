@@ -12,13 +12,15 @@ import urllib
 
 import numpy as np
 from scipy.io import loadmat
+from scipy.signal import welch
+from scipy.integrate import simps
 
 from tensorpac import Pac, EventRelatedPac, PreferredPhase
 from tensorpac.utils import PeakLockedTF, PSD, ITC, BinAmplitude
 from tensorpac.signals import pac_signals_wavelet
 
-import matplotlib.pyplot as plt
-
+import pandas as pd
+import mne
 
 # filename = os.path.join(os.getcwd(), 'seeg_data_pac.npz')
 # if not os.path.isfile(filename):
@@ -33,18 +35,46 @@ import matplotlib.pyplot as plt
 
 
 
-f_pha = 6       # frequency phase for the coupling
-f_amp = 70      # frequency amplitude for the coupling
-n_epochs = 20   # number of trials
-n_times = 4000  # number of time points
-sf = 512.       # sampling frequency
-data, time = pac_signals_wavelet(sf=sf, f_pha=f_pha, f_amp=f_amp, noise=3.,
-                                 n_epochs=n_epochs, n_times=n_times)
+# f_pha = 6       # frequency phase for the coupling
+# f_amp = 70      # frequency amplitude for the coupling
+# n_epochs = 20   # number of trials
+# n_times = 4000  # number of time points
+sf = 500       # sampling frequency
+# data, time = pac_signals_wavelet(sf=sf, f_pha=f_pha, f_amp=f_amp, noise=3.,
+#                                  n_epochs=n_epochs, n_times=n_times)
+
+# fn = "D:\\COGA\\data_for_mwt\\CZ_ant_7_l1_40039009_32.cnt_500.csv"
+# data = np.array(eeg)
+
+pth = "C:\\Users\\crichard\\Downloads\\data.txt"
+pth = "D:\\COGA\\data_for_mwt\\CZ_ant_7_l1_40039009_32.cnt_500.csv"
+band_rng = [0.5, 4]
+
+data = np.loadtxt(pth, delimiter=',', skiprows=1)
+
+
+time = np.arange(data.size)/500
+plt.plot(time, data, lw=1.5,color='k')
+win_length = (2/band_rng[0])*sf
+freqs, psd = welch(data , sf, nperseg=win_length)
+plt.plot(freqs,psd)
+fres = band_rng[1] - band_rng[0]
+ib = np.logical_and(freqs>=band_rng[0], freqs<band_rng[1])
+bp = simps(psd, dx=fres)
+
+# ch_types = ["eeg"]*data.shape[1]
+# data = data.reshape(1, len(data))
+ch_types = ["eeg"]
+info = mne.create_info(ch_names=['Cz'], sfreq=500,ch_types=ch_types)
+raw = mne.io.RawArray(data, info)
+
+win_length = (2/band_rng[0])*sf
+freqs, psd = welch(data , sf, nperseg=win_length)
 
 
 # define a :class:`tensorpac.Pac` object and use the MVL as the main method
 # for measuring PAC
-p = Pac(idpac=(1, 0, 0), f_pha=(3, 10, 1, .2), f_amp=(50, 90, 5, 1),
+p = Pac(idpac=(1, 2, 4), f_pha=(3, 10, 1, .2), f_amp=(50, 90, 5, 1),
         dcomplex='wavelet', width=12)
 
 # Now, extract all of the phases and amplitudes

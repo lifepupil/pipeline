@@ -271,3 +271,50 @@ def print_demo_vals(tbl):
 
 
     print('TOTAL SAMPLE: ' + str(len(tbl)))
+    
+    
+def get_band_psds(f, FREQ_BANDS):
+    import numpy as np
+    # from scipy.signal import welch
+    # from mne.time_frequency import psd_array_multitaper
+    # from scipy.integrate import simps
+    # import matplotlib.pyplot as plt
+    import mne
+
+    
+    pth = f[0] + f[1]
+    # TOP ROW OF THE CSV FILES CONTAINING EEG CHANNEL DATA IS CHANNEL NAME SO WE EXCLUDE IT
+    data = np.loadtxt(pth, delimiter=',', skiprows=1)
+    data = data*1000000
+    info = mne.create_info(ch_names=['chan'], sfreq=500,ch_types=["eeg"])
+    data = data.reshape(1,len(data))
+    raw = mne.io.RawArray(data, info)
+    pspect = raw.compute_psd(fmin=1.0, fmax=50.0)
+    psds, freqs = pspect.get_data(return_freqs=True)
+    psds /= np.sum(psds, axis=-1, keepdims=True)
+    band_powers = []
+    for fmin, fmax in FREQ_BANDS.values():
+        psds_band = psds[0][ (freqs >= fmin) & (freqs < fmax)].mean()
+        band_powers.append(psds_band.reshape(len(psds), -1))
+    return np.concatenate(band_powers, axis=1)[0]
+    
+    # pth = "C:\\Users\\crichard\\Downloads\\data.txt"
+    # pth = "D:\\COGA\\data_for_mwt\\O1_eec_5_l1_40039009_32.cnt_500.csv"
+    # band_rng = [8, 12]
+    # time = np.arange(data.size)/sample_rate
+    # plt.plot(time, data, lw=1.5,color='k')
+    # # SET SIZE (DURATION LENGTH) OF WINDOW FOR CALCULATING POWER SPECTRAL DENSITY
+    # # BASED ON AT LEAST TWO COMPLETE CYCLES OF THE LOW FREQUENCY BOUNDARY 
+    # # win_length = (2/band_rng[0])*sample_rate
+    # # NOW WE GET PDSs
+    # # freqs, psd = welch(data, sample_rate, nperseg=win_length)
+    # psd, freqs = psd_array_multitaper(data, sample_rate, fmin=0,fmax=50)
+    # plt.figure(figsize=(8,4))
+    # plt.plot(freqs,psd)
+    # plt.yscale('log')
+    # plt.xlim([-1,20])
+    # freq_resolution = band_rng[1] - band_rng[0]
+    # # GETS THE INDICES BETWEEN WHICH REPRESENT THE HIGH AND LOW FREQUENCIES DEFINING THE EEG BAND 
+    # freqBand_i = np.logical_and(freqs>=band_rng[0], freqs<band_rng[1])
+    # band_power = simps(psd[freqBand_i], dx=freq_resolution)
+    # bp_relative = band_power/simps(psd, dx=freq_resolution)
