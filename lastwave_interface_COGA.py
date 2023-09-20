@@ -42,7 +42,7 @@ do_pac = True                      # PHASE AMPLITUDE COUPLING USING TENSORPAC
 
 # PARAMETERS
 base_dir = "E:\\Documents\\COGA_eec\\data\\"
-write_dir = "D:\\COGA_eec\\"
+write_dir = "D:\\COGA\\"
     
 # specific frequency bands
 FREQ_BANDS = {"delta": [0.5, 4],
@@ -58,8 +58,8 @@ if do_pac:
     # OR TO GENERATE TABLE FOR EACH EEG CHANNEL FOR USE IN DEEP LEARNING NETWORKS THEN
     # POINT source_dir TO A cleaned_data FOLDER AND SET whichEEGfileExtention TO cnt
     whichEEGfileExtention = 'csv'
-    pac_path = 'C:\\Users\\CRichard\\Documents\\COGA_eec\\tensorpac\\' 
-    core_pheno_list = 'C:\\Users\\lifep\\OneDrive\\Documents\\COGA_sub_info\\core_pheno_20201120.csv'
+    # core_pheno_list = 'C:\\Users\\lifep\\OneDrive\\Documents\\COGA_sub_info\\core_pheno_20201120.csv'
+    core_pheno_list = 'D:\\COGA\\core_pheno_20201120.csv'
     
     if whichEEGfileExtention=='csv':
         source_dir = write_dir + "cleaned_data\\"
@@ -301,6 +301,9 @@ if do_filter_eeg_signal_cnt:
                 plt.clf()
 
 if do_pac:    
+    source_dir = 'D:\\COGA\\data_for_mwt\\'
+    base_dir = "D:\\COGA\\"
+
     # GET A LIST OF ALL THE .CSV FILES OF SUBJECT-VISIT-EEG CHANNELS 
     # THAT HAVE BEEN EXTRACTED FROM .CNT FILES AND HIGH/LOW PASS FILTERED
     # OR CAN USE TO GENERATE INFO TABLE FROM .CNT FILES BY PASSING 'cnt' INSTEAD OF 'csv'
@@ -316,7 +319,7 @@ if do_pac:
     # ANALYSIS USING DEEP LEARNING NETWORKS AS WELL AS FOR TRADITIONAL STATISTICS
     for f in eegList:
         # f = eegList[3886]
-        # print(f[1])
+        print(f[1])
         # REMOVE THE FILE EXTENSION
         f[1]  = f[1][0:-4]
         # WE NEED TO EXTRACT INFO CONTAINED IN THE FILE NAME
@@ -332,7 +335,8 @@ if do_pac:
         thisRun = csd.get_sub_from_fname(f[1], visit_pos)[1]
         thisTask = csd.get_sub_from_fname(f[1], task_pos)
         thisChan = csd.get_sub_from_fname(f[1], chan_pos)
-        
+        thisSampFreq = f[1].split('_')
+        thisSampFreq = int(thisSampFreq[len(thisSampFreq)-1])
         # THERE ARE VISITS THAT ARE LABELED WITH 'L' THAT DON'T FIT THE 
         # FILENAMING CONVENTION THAT I WAS GIVEN INITIALLY SO FOR NOW
         # WE ARE IGNORING .CNT FILES THAT HAVE 'L' FOR VISIT INFO
@@ -401,7 +405,9 @@ if do_pac:
         # WE CAN THEN COMPARE PHASE AMPLITUDE COUPLING IN EEG OF SUBJECTS WITH AUD
         #       COMPARED TO THOSE THAT DO NOT HAVE AUD
         
-        freq_band_psds = csd.get_band_psds(f, FREQ_BANDS)
+        freq_band_psds = csd.get_band_psds(f, thisSampFreq, FREQ_BANDS)
+        eeg_dur = csd.get_recording_duration(f, thisSampFreq)
+        
 
         # FINALLY WE PUT ALL THE INFO AND PAC CALCULATIONS INTO A ONE ROW DATAFRAME 
         # TO ADD TO THE BIG DATAFRAME pacdat.
@@ -412,6 +418,7 @@ if do_pac:
                            'hispanic': [hisp_dict[srow.iloc[0]['hisp']]],
                            'task': [thisTask],
                            'channel': [thisChan],
+                           'duration': [eeg_dur],
                            'this_visit': [thisVisit + 1],
                            'this_run': [thisRun],
                            'total_visits': [len(visit_list)],

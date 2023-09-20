@@ -273,20 +273,26 @@ def print_demo_vals(tbl):
     print('TOTAL SAMPLE: ' + str(len(tbl)))
     
     
-def get_band_psds(f, FREQ_BANDS):
+def get_recording_duration(f, sfreq):
+    import numpy as np
+    pth = f[0] + f[1] + '.csv'
+    data = np.loadtxt(pth, delimiter=',', skiprows=1)
+    eeg_dur = len(data)/sfreq 
+    return eeg_dur
+    
+def get_band_psds(f, sfreq, FREQ_BANDS):
     import numpy as np
     # from scipy.signal import welch
     # from mne.time_frequency import psd_array_multitaper
     # from scipy.integrate import simps
     # import matplotlib.pyplot as plt
     import mne
-
     
-    pth = f[0] + f[1]
+    pth = f[0] + f[1] + '.csv'
     # TOP ROW OF THE CSV FILES CONTAINING EEG CHANNEL DATA IS CHANNEL NAME SO WE EXCLUDE IT
     data = np.loadtxt(pth, delimiter=',', skiprows=1)
-    data = data*1000000
-    info = mne.create_info(ch_names=['chan'], sfreq=500,ch_types=["eeg"])
+    # data = data*1000000
+    info = mne.create_info(ch_names=['chan'], sfreq=sfreq,ch_types=["eeg"])
     data = data.reshape(1,len(data))
     raw = mne.io.RawArray(data, info)
     pspect = raw.compute_psd(fmin=1.0, fmax=50.0)
