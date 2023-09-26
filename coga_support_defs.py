@@ -291,17 +291,25 @@ def get_band_psds(f, sfreq, FREQ_BANDS):
     pth = f[0] + f[1] + '.csv'
     # TOP ROW OF THE CSV FILES CONTAINING EEG CHANNEL DATA IS CHANNEL NAME SO WE EXCLUDE IT
     data = np.loadtxt(pth, delimiter=',', skiprows=1)
-    # data = data*1000000
-    info = mne.create_info(ch_names=['chan'], sfreq=sfreq,ch_types=["eeg"])
+    # WE NEED TO MAKE A MNE info OBJECT TO GET THE RAW DATA FROM THE CSV FILE 
+    # IN ORDER TO MAKE AN MNE OBJECT TO GET PSD
+    info = mne.create_info(ch_names=['chan'], sfreq=sfreq, ch_types=["eeg"])
     data = data.reshape(1,len(data))
     raw = mne.io.RawArray(data, info)
+    mne.viz.plot_raw_psd(raw)
+    # NOW WE CALCULATE PSD FOR THIS MNE OBJECT
     pspect = raw.compute_psd(fmin=1.0, fmax=50.0)
     psds, freqs = pspect.get_data(return_freqs=True)
+    # AND NORMALIZE TO GET RELATIVE EEG VALUES
     psds /= np.sum(psds, axis=-1, keepdims=True)
+    # FINALLY WE AVERAGE SPECTRAL POWER (IN uV^2/Hz, I.E. IN dB)
+    # FOR THE FREQ_BANDS PASSED TO THIS FUNCTION WHICH USE STANDARD EEG
+    # FREQUENCY BANDS BY DEFAULT
     band_powers = []
     for fmin, fmax in FREQ_BANDS.values():
-        psds_band = psds[0][ (freqs >= fmin) & (freqs < fmax)].mean()
+        psds_band = psds[0][ (freqs >= fmin) & (freqs < fmax)].sum()
         band_powers.append(psds_band.reshape(len(psds), -1))
+    # FINALLY WE RETURN THOSE dB VALUES FOR INCLUSION INTO OUTPUT TABLE
     return np.concatenate(band_powers, axis=1)[0]
     
     # pth = "C:\\Users\\crichard\\Downloads\\data.txt"

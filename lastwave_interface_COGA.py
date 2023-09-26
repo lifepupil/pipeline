@@ -38,7 +38,8 @@ import coga_support_defs as csd
 do_sas_convert = False             # TO CONVERT .SAS7PDAT FILES TO TABLES SO THAT SUBJECT METADATA CAN BE USED DOWNSTREAM
 do_plot_eeg_signal_and_mwt = False # TO PLOT SIGNAL AND HEATMAP FOR A GIVEN FILE
 do_filter_eeg_signal_cnt = False    # TO DO LOW PASS, HIGH PASS, NOTCH FILTER TO REMOVE LINE NOISE FROM SIGNAL, AND ICA
-do_pac = True                      # PHASE AMPLITUDE COUPLING USING TENSORPAC
+make_data_table = True                      # GENERATED A DATA TABLE WITH DEMOGRAPHIC INFO, ALCOHOLISM STATUS, AND MACHINE LEARNING INPUTS, E.G. BAND POWER
+do_deep_learn = False                        # USES DATA TABLE AS INPUT TO DEEP LEARNING NETWORK TRAINING AND TESTING
 
 # PARAMETERS
 base_dir = "E:\\Documents\\COGA_eec\\data\\"
@@ -52,8 +53,8 @@ FREQ_BANDS = {"delta": [0.5, 4],
               "high_beta": [20, 30],
               'low_gamma': [30, 50]}
 
-# PARAMETERS FOR do_pac PHASE AMPLITUDE COUPLING USING TENSORPAC
-if do_pac:
+# PARAMETERS FOR make_data_table PHASE AMPLITUDE COUPLING USING TENSORPAC
+if make_data_table:
     # TO GET SUBJECT-WISE STATS POINT source_dir TO A data FOLDER AND SET whichEEGfileExtention TO cnt
     # OR TO GENERATE TABLE FOR EACH EEG CHANNEL FOR USE IN DEEP LEARNING NETWORKS THEN
     # POINT source_dir TO A cleaned_data FOLDER AND SET whichEEGfileExtention TO cnt
@@ -300,7 +301,7 @@ if do_filter_eeg_signal_cnt:
                 plt.savefig(write_dir + 'eeg_figures\\' + figFN)
                 plt.clf()
 
-if do_pac:    
+if make_data_table:    
     source_dir = 'D:\\COGA\\data_for_mwt\\'
     base_dir = "D:\\COGA\\"
 
@@ -469,7 +470,8 @@ if do_pac:
         csd.print_demo_vals(tbl)
 
     
-    
+if do_deep_learn:
+    a = 1
     
     
     
