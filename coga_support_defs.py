@@ -296,7 +296,7 @@ def get_band_psds(f, sfreq, FREQ_BANDS):
     info = mne.create_info(ch_names=['chan'], sfreq=sfreq, ch_types=["eeg"])
     data = data.reshape(1,len(data))
     raw = mne.io.RawArray(data, info)
-    mne.viz.plot_raw_psd(raw)
+    # mne.viz.plot_raw_psd(raw)
     # NOW WE CALCULATE PSD FOR THIS MNE OBJECT
     pspect = raw.compute_psd(fmin=1.0, fmax=50.0)
     psds, freqs = pspect.get_data(return_freqs=True)

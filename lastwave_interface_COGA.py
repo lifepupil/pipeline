@@ -37,13 +37,13 @@ import coga_support_defs as csd
 # INSTANCE VARIABLES
 do_sas_convert = False             # TO CONVERT .SAS7PDAT FILES TO TABLES SO THAT SUBJECT METADATA CAN BE USED DOWNSTREAM
 do_plot_eeg_signal_and_mwt = False # TO PLOT SIGNAL AND HEATMAP FOR A GIVEN FILE
-do_filter_eeg_signal_cnt = False    # TO DO LOW PASS, HIGH PASS, NOTCH FILTER TO REMOVE LINE NOISE FROM SIGNAL, AND ICA
-make_data_table = True                      # GENERATED A DATA TABLE WITH DEMOGRAPHIC INFO, ALCOHOLISM STATUS, AND MACHINE LEARNING INPUTS, E.G. BAND POWER
+do_filter_eeg_signal_cnt = True    # TO DO LOW PASS, HIGH PASS, NOTCH FILTER TO REMOVE LINE NOISE FROM SIGNAL, AND ICA
+make_data_table = False                      # GENERATED A DATA TABLE WITH DEMOGRAPHIC INFO, ALCOHOLISM STATUS, AND MACHINE LEARNING INPUTS, E.G. BAND POWER
 do_deep_learn = False                        # USES DATA TABLE AS INPUT TO DEEP LEARNING NETWORK TRAINING AND TESTING
 
 # PARAMETERS
 base_dir = "E:\\Documents\\COGA_eec\\data\\"
-write_dir = "D:\\COGA\\"
+write_dir = "D:\\COGA_eec\\"
     
 # specific frequency bands
 FREQ_BANDS = {"delta": [0.5, 4],
@@ -59,8 +59,8 @@ if make_data_table:
     # OR TO GENERATE TABLE FOR EACH EEG CHANNEL FOR USE IN DEEP LEARNING NETWORKS THEN
     # POINT source_dir TO A cleaned_data FOLDER AND SET whichEEGfileExtention TO cnt
     whichEEGfileExtention = 'csv'
-    # core_pheno_list = 'C:\\Users\\lifep\\OneDrive\\Documents\\COGA_sub_info\\core_pheno_20201120.csv'
-    core_pheno_list = 'D:\\COGA\\core_pheno_20201120.csv'
+    core_pheno_list = 'C:\\Users\\lifep\\OneDrive\\Documents\\COGA_sub_info\\core_pheno_20201120.csv'
+    # core_pheno_list = 'D:\\COGA\\core_pheno_20201120.csv'
     
     if whichEEGfileExtention=='csv':
         source_dir = write_dir + "cleaned_data\\"
@@ -123,7 +123,7 @@ if do_filter_eeg_signal_cnt:
     do_plot_channels = True # TO GENERATE PLOTS OF THE CLEANED EEG SIGNAL
     mpl.rcParams['figure.dpi'] = 300 # DETERMINES THE RESOLUTION OF THE EEG PLOTS
     eye_blink_chans = ['X', 'Y'] # NAMES OF CHANNELS CONTAINING EOG
-    institutionDir = 'uconn' # suny, indiana, iowa, uconn, ucsd, washu
+    institutionDir = 'washu' # suny, indiana, iowa, uconn, ucsd, washu
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -245,10 +245,19 @@ if do_filter_eeg_signal_cnt:
         # BUT FIRST WE NEED TO SEE WHETHER THERE ARE ANY eog CHANNELS IN data AND
         # IF NOT THEN WE USE THE FRONTAL POLAR CHANNELS FOR EYE BLINK DETECTION
         if 'eog' not in data.get_channel_types():
-            eog_indices, eog_scores = ica.find_bads_eog(filtered_data,
-                                                        ch_name=['FP1', 'FP2'],
-                                                        verbose=False
-                                                        )
+            # IT TURNS OUT THAT THERE ARE SOME FILES THAT HAVE NEITHER 
+            # LABELED EOG NOR FP1 OR FP2 SO WE SKIP THESE FILES 
+            # ONLY EXAMPLE FOUND SO FAR IS ONE WHERE CHANNELS ARE ALL NUMBERS
+            # SEE: eec_1_a1_50302007.cnt
+            if any(ch in channels for ch in ('FP1', 'FP2')):
+                eog_indices, eog_scores = ica.find_bads_eog(filtered_data,
+                                                            ch_name=['FP1', 'FP2'],
+                                                            verbose=False
+                                                            )
+            else:
+                with open(base_dir + 'errors_from_core_pheno.txt', 'a') as bf:
+                    bf.write(str(fname) + '\t ' + 'MISSING EOG AND FRONTAL CHANNELS ' + '\n')
+                continue 
         else:
             eog_indices, eog_scores = ica.find_bads_eog(filtered_data,
                                                         verbose=False
@@ -290,7 +299,12 @@ if do_filter_eeg_signal_cnt:
             print(ch + ', '  + ' -- ' + fname[:-4])
             this_chan = filtered_data.get_data([ch])[0]
             datFN = ch + '_' + fname + '_' + str(samp_freq) + '.csv'
-            np.savetxt(write_dir + 'cleaned_data\\' + datFN, this_chan.T , delimiter=',', header=ch, comments='')
+            try:
+                np.savetxt(write_dir + 'cleaned_data\\' + datFN, this_chan.T , delimiter=',', header=ch, comments='')
+            except Exception as e:
+                with open(base_dir + 'errors_from_core_pheno.txt', 'a') as bf:
+                    bf.write(str(datFN) + '\t ' + str(e) + '\n')
+                continue        
             # THIS CONTROLS WHETHER CHANNEL PLOTS ARE GENERATED OR NOT
             if do_plot_channels:
                 figFN = ch + '_' + fname[:-4] + '_' + str(samp_freq) + '.png'
@@ -302,8 +316,8 @@ if do_filter_eeg_signal_cnt:
                 plt.clf()
 
 if make_data_table:    
-    source_dir = 'D:\\COGA\\data_for_mwt\\'
-    base_dir = "D:\\COGA\\"
+    source_dir = 'D:\\COGA_eec\\cleaned_data\\'
+    base_dir = "D:\\COGA_eec\\"
 
     # GET A LIST OF ALL THE .CSV FILES OF SUBJECT-VISIT-EEG CHANNELS 
     # THAT HAVE BEEN EXTRACTED FROM .CNT FILES AND HIGH/LOW PASS FILTERED
