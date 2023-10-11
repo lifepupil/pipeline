@@ -18,13 +18,17 @@ import numpy as np
 # from scipy.signal import sosfiltfilt, butter
 # import seaborn as sns
 import string
-# import statistics as stats
+# import statistics as st
+import scipy.stats as stats
 # import sympy as sp
 # import pyprep as pp
 
 import mne
 from mne.preprocessing import ICA
 # import torch
+# import torch.nn as nn
+# import torch.optim as optim
+
 # import mne_icalabel as mica
 from mne_icalabel import label_components
 # import os
@@ -35,11 +39,12 @@ import coga_support_defs as csd
 
 
 # INSTANCE VARIABLES
-do_sas_convert = False             # TO CONVERT .SAS7PDAT FILES TO TABLES SO THAT SUBJECT METADATA CAN BE USED DOWNSTREAM
-do_plot_eeg_signal_and_mwt = False # TO PLOT SIGNAL AND HEATMAP FOR A GIVEN FILE
-do_filter_eeg_signal_cnt = True    # TO DO LOW PASS, HIGH PASS, NOTCH FILTER TO REMOVE LINE NOISE FROM SIGNAL, AND ICA
-make_data_table = False                      # GENERATED A DATA TABLE WITH DEMOGRAPHIC INFO, ALCOHOLISM STATUS, AND MACHINE LEARNING INPUTS, E.G. BAND POWER
-do_deep_learn = False                        # USES DATA TABLE AS INPUT TO DEEP LEARNING NETWORK TRAINING AND TESTING
+do_sas_convert = False              # TO CONVERT .SAS7PDAT FILES TO TABLES SO THAT SUBJECT METADATA CAN BE USED DOWNSTREAM
+do_plot_eeg_signal_and_mwt = False  # TO PLOT SIGNAL AND HEATMAP FOR A GIVEN FILE
+do_filter_eeg_signal_cnt = False    # TO DO LOW PASS, HIGH PASS, NOTCH FILTER TO REMOVE LINE NOISE FROM SIGNAL, AND ICA
+make_data_table = False              # GENERATED A DATA TABLE WITH DEMOGRAPHIC INFO, ALCOHOLISM STATUS, AND MACHINE LEARNING INPUTS, E.G. BAND POWER
+do_stats = False                    # FOR TRADITIONAL STATISTICAL ANALYSIS 
+do_deep_learn = True               # USES DATA TABLE AS INPUT TO DEEP LEARNING NETWORK TRAINING AND TESTING
 
 # PARAMETERS
 base_dir = "E:\\Documents\\COGA_eec\\data\\"
@@ -423,6 +428,7 @@ if make_data_table:
         freq_band_psds = csd.get_band_psds(f, thisSampFreq, FREQ_BANDS)
         eeg_dur = csd.get_recording_duration(f, thisSampFreq)
         
+        # AF1_eec_1_a1_10197014_256 test flat eeg
 
         # FINALLY WE PUT ALL THE INFO AND PAC CALCULATIONS INTO A ONE ROW DATAFRAME 
         # TO ADD TO THE BIG DATAFRAME pacdat.
@@ -471,7 +477,7 @@ if make_data_table:
     # pacdat['second_age'] = pacdat.apply(lambda r: r['age_this_visit'] if r['this_visit']==2 else 0, axis=1)
     
     # FINALLY WE SAVE THE pacdat TABLE
-    pacdat.to_csv(write_dir + 'pacdat_' + institutionDir + '.csv', index=False)
+    pacdat.to_csv(base_dir + 'pacdat' + '.csv', index=False)
 
     if whichEEGfileExtention=='cnt':
         # NOW WE EXECUTE THIS CODE TO GET DEMOGRAPHICS FROM SUBJECTS
@@ -483,9 +489,60 @@ if make_data_table:
         tbl.to_csv(base_dir + 'pd.csv', index=False)
         csd.print_demo_vals(tbl)
 
+if do_stats:
+    # import statsmodels.api as sm
+    from statsmodels.formula.api import ols
+    from pingouin import ancova
+    
+    # OPEN pacdat DATA TABLE
+    pacdat = pd.read_csv(write_dir + 'pacdat.csv')
+    g1 = pacdat['delta'][(pacdat['alcoholic']==True) & (pacdat['channel']=='CZ') & (pacdat['sex']=='M')]
+    g2 = pacdat['delta'][(pacdat['alcoholic']==False) & (pacdat['channel']=='CZ') & (pacdat['sex']=='M')]
+    stats.ttest_ind(g1, g2)
+
+    model = ols('delta ~ alcoholic + age_this_visit + sex', data=pacdat).fit()
+    print(model.summary())
+    
+    dt = pacdat[(pacdat.duration>=180) & (pacdat.channel=='CZ')]
+    dt = dt[['sex','channel','age_this_visit','delta','theta','alpha','low_beta','high_beta','gamma','alcoholic']]
+    dt['alcoholic'] = dt['alcoholic'].astype(float)
+    # IN CASE NEED TO USE DUMMY VARIABLE CODING UNCOMMENT LINE BELOW
+    # dt = pd.get_dummies(dt,columns=['sex'],dtype=float)
+    ancova(data=dt[dt['sex']=='M'], dv='high_beta', covar='age_this_visit', between='alcoholic')
     
 if do_deep_learn:
-    a = 1
+
+    from tensorflow.keras.models import Sequential
+    from tensorflow.keras.layers import Dense
+    
+    # OPEN pacdat DATA TABLE
+    pacdat = pd.read_csv(write_dir + 'pacdat.csv')
+    # REMOVE CHANNELS THAT ARE TOO SHORT IN DURATION - DUR > 180 SECONDS  (ALSO TOO LONG?)
+    # TRAIN NETWORK ON CHANNEL AT A TIME OR CHANNELS IN SAME REGION, E.G. CENTRAL CHANNELS
+    dl = pacdat[(pacdat.duration>=180) & (pacdat.channel=='CZ') & (pacdat.sex=='M')]
+    # REMOVE COLUMNS THAT ARE NOT NEEDED, E.G. UNLESS DOING LSTM LEAVE OUT VISIT ORDER
+    dl = dl[['sex','channel','age_this_visit','delta','theta','alpha','low_beta','high_beta','gamma','alcoholic']]
+    # RECODE CATEGORICAL VALUES TO NUMERICS
+    dl['alcoholic'] = dl['alcoholic'].astype(float)
+    # SPLIT TABLE INTO SEPARATE TABLES FOR INPUT AND OUTPUT VARIABLES
+    outp = dl['alcoholic']
+    inp = dl.iloc[:,2:8]
+    
+    model = Sequential()
+    model.add(Dense(12, input_shape=(6,), activation='relu'))
+    model.add(Dense(8, activation='relu'))
+    model.add(Dense(1, activation='sigmoid'))
+    
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    model.fit(inp, outp, epochs=150, batch_size=10)
+    _, accuracy = model.evaluate(inp, outp)
+    print('Accuracy: %.2f' % (accuracy*100))
+    
+    predictions = (model.predict(inp) > 0.5).astype(int)
+    # summarize the first 5 cases
+    for i in range(5):
+        print('%s => %d (expected %d)' % (inp[i].tolist(), predictions[i], outp[i]))
+    
     
     
     
