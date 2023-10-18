@@ -23,14 +23,14 @@ import scipy.stats as stats
 # import sympy as sp
 # import pyprep as pp
 
-import mne
-from mne.preprocessing import ICA
+# import mne
+# from mne.preprocessing import ICA
 # import torch
 # import torch.nn as nn
 # import torch.optim as optim
 
 # import mne_icalabel as mica
-from mne_icalabel import label_components
+# from mne_icalabel import label_components
 # import os
 # import sys
 import matplotlib as mpl
@@ -513,36 +513,59 @@ if do_stats:
 if do_deep_learn:
 
     from tensorflow.keras.models import Sequential
-    from tensorflow.keras.layers import Dense
+    from tensorflow.keras.layers import Dense, LeakyReLU, BatchNormalization, Dropout
+    from sklearn.model_selection import GroupShuffleSplit
+    import keras as ks
     
     # OPEN pacdat DATA TABLE
     pacdat = pd.read_csv(write_dir + 'pacdat.csv')
+    # EXCLUDE ROWS WITH NAs
+    pacdat = pacdat.dropna()
     # REMOVE CHANNELS THAT ARE TOO SHORT IN DURATION - DUR > 180 SECONDS  (ALSO TOO LONG?)
     # TRAIN NETWORK ON CHANNEL AT A TIME OR CHANNELS IN SAME REGION, E.G. CENTRAL CHANNELS
-    dl = pacdat[(pacdat.duration>=180) & (pacdat.channel=='CZ') & (pacdat.sex=='M')]
+    dl = pacdat[(pacdat.duration>=90) & (pacdat.channel=='CZ')]
     # REMOVE COLUMNS THAT ARE NOT NEEDED, E.G. UNLESS DOING LSTM LEAVE OUT VISIT ORDER
     dl = dl[['sex','channel','age_this_visit','delta','theta','alpha','low_beta','high_beta','gamma','alcoholic']]
     # RECODE CATEGORICAL VALUES TO NUMERICS
-    dl['alcoholic'] = dl['alcoholic'].astype(float)
+    dl['alcoholic'] = [1 if alc == True else 0 for alc in dl['alcoholic']]
     # SPLIT TABLE INTO SEPARATE TABLES FOR INPUT AND OUTPUT VARIABLES
     outp = dl['alcoholic']
-    inp = dl.iloc[:,2:8]
+    inp = dl.iloc[:,3:8]
     
+    leaky_relu = LeakyReLU(alpha=0.001)
     model = Sequential()
-    model.add(Dense(12, input_shape=(6,), activation='relu'))
-    model.add(Dense(8, activation='relu'))
+    model.add(BatchNormalization())
+    model.add(Dense(30, input_shape=(len(inp.columns),), activation='leaky_relu'))
+    model.add(Dropout(0.2))
+    model.add(BatchNormalization())
+    model.add(Dense(12, activation='leaky_relu'))
+    model.add(Dropout(0.2))
     model.add(Dense(1, activation='sigmoid'))
     
-    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-    model.fit(inp, outp, epochs=150, batch_size=10)
+    optimizer = ks.optimizers.Adam(learning_rate=0.001)
+    model.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=['accuracy'])
+    model.fit(inp, outp, 
+              epochs=100, 
+              batch_size=16,
+              shuffle=True,
+              validation_split=0.2)
+    
+    loss = np.array(model.history.history['loss'])
+    vloss = np.array(model.history.history['val_loss'])
+    acc = np.array(model.history.history['accuracy'])
+    vacc = np.array(model.history.history['val_accuracy'])
+    x = np.linspace(0,len(acc)-1,len(acc))
+    params_dl = str(model.history.params)
+    
     _, accuracy = model.evaluate(inp, outp)
     print('Accuracy: %.2f' % (accuracy*100))
     
     predictions = (model.predict(inp) > 0.5).astype(int)
-    # summarize the first 5 cases
-    for i in range(5):
-        print('%s => %d (expected %d)' % (inp[i].tolist(), predictions[i], outp[i]))
-    
-    
-    
-    
+            
+
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    fig.suptitle(params_dl)
+    ax.plot(x, acc, color='red', label='acc')
+    ax.plot(x, loss, color='blue', label='loss')
+    ax.legend()
