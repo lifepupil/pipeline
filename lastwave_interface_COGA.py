@@ -535,7 +535,7 @@ if do_deep_learn:
     leaky_relu = LeakyReLU(alpha=0.001)
     model = Sequential()
     model.add(BatchNormalization())
-    model.add(Dense(30, input_shape=(len(inp.columns),), activation='leaky_relu'))
+    model.add(Dense(30, input_shape=(len(inp.columns),), activation='elu'))
     model.add(Dropout(0.2))
     model.add(BatchNormalization())
     model.add(Dense(12, activation='leaky_relu'))

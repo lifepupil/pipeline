@@ -46,8 +46,8 @@ sf = 500       # sampling frequency
 # fn = "D:\\COGA\\data_for_mwt\\CZ_ant_7_l1_40039009_32.cnt_500.csv"
 # data = np.array(eeg)
 
-pth = "C:\\Users\\crichard\\Downloads\\data.txt"
-pth = "D:\\COGA\\data_for_mwt\\CZ_ant_7_l1_40039009_32.cnt_500.csv"
+# pth = "C:\\Users\\crichard\\Downloads\\data.txt"
+pth = "D:\\COGA_eec\\\cleaned_data\\CZ_eec_1_a1_10158001_cnt_256.csv"
 band_rng = [0.5, 4]
 
 data = np.loadtxt(pth, delimiter=',', skiprows=1)
@@ -55,21 +55,25 @@ data = np.loadtxt(pth, delimiter=',', skiprows=1)
 
 time = np.arange(data.size)/500
 plt.plot(time, data, lw=1.5,color='k')
+plt.show()
+
 win_length = (2/band_rng[0])*sf
 freqs, psd = welch(data , sf, nperseg=win_length)
-plt.plot(freqs,psd)
+plt.plot(freqs[freqs<80],psd[freqs<80])
+plt.show()
+
 fres = band_rng[1] - band_rng[0]
 ib = np.logical_and(freqs>=band_rng[0], freqs<band_rng[1])
 bp = simps(psd, dx=fres)
 
 # ch_types = ["eeg"]*data.shape[1]
 # data = data.reshape(1, len(data))
-ch_types = ["eeg"]
-info = mne.create_info(ch_names=['Cz'], sfreq=500,ch_types=ch_types)
-raw = mne.io.RawArray(data, info)
+# ch_types = ["eeg"]
+# info = mne.create_info(ch_names=['Cz'], sfreq=500,ch_types=ch_types)
+# raw = mne.io.RawArray(data, info)
 
-win_length = (2/band_rng[0])*sf
-freqs, psd = welch(data , sf, nperseg=win_length)
+# win_length = (2/band_rng[0])*sf
+# freqs, psd = welch(data , sf, nperseg=win_length)
 
 
 # define a :class:`tensorpac.Pac` object and use the MVL as the main method
@@ -87,7 +91,7 @@ for i, k in enumerate(range(4)):
     # change the pac method
     p.idpac = (5, k, 1)
     # compute only the pac without filtering
-    xpac = p.fit(phases, amplitudes, n_perm=20)
+    xpac = p.fit(phases, amplitudes, n_perm=400)
     # plot
     title = p.str_surro.replace(' (', '\n(')
     plt.subplot(2, 2, k + 1)
