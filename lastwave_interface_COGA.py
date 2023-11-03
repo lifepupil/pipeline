@@ -43,8 +43,9 @@ do_sas_convert = False              # TO CONVERT .SAS7PDAT FILES TO TABLES SO TH
 do_plot_eeg_signal_and_mwt = False  # TO PLOT SIGNAL AND HEATMAP FOR A GIVEN FILE
 do_filter_eeg_signal_cnt = False    # TO DO LOW PASS, HIGH PASS, NOTCH FILTER TO REMOVE LINE NOISE FROM SIGNAL, AND ICA
 make_data_table = False              # GENERATED A DATA TABLE WITH DEMOGRAPHIC INFO, ALCOHOLISM STATUS, AND MACHINE LEARNING INPUTS, E.G. BAND POWER
-do_stats = False                    # FOR TRADITIONAL STATISTICAL ANALYSIS 
-do_deep_learn = True               # USES DATA TABLE AS INPUT TO DEEP LEARNING NETWORK TRAINING AND TESTING
+do_stats = False                   # FOR TRADITIONAL STATISTICAL ANALYSIS 
+do_reshape_by_subject = True       # RESHAPES pacdat SO THAT EACH ROW IS ONE SUBJECT-VISIT WITH ALL CHANNELS AT ALL FREQUENCY BANDS
+do_deep_learn = False               # USES DATA TABLE AS INPUT TO DEEP LEARNING NETWORK TRAINING AND TESTING
 
 # PARAMETERS
 base_dir = "E:\\Documents\\COGA_eec\\data\\"
@@ -510,7 +511,58 @@ if do_stats:
     # dt = pd.get_dummies(dt,columns=['sex'],dtype=float)
     ancova(data=dt[dt['sex']=='M'], dv='high_beta', covar='age_this_visit', between='alcoholic')
     
+if do_reshape_by_subject:
+    # OPEN pacdat DATA TABLE
+    pacdat = pd.read_csv(write_dir + 'pacdat.csv')
+    # EXCLUDE ROWS WITH NAs
+    pacdat = pacdat.dropna()
+    
+    # LET'S GET A LIST OF ALL THE SUBJECT IDs
+    ids = set(pacdat.ID)
+    ids = list(ids)
+    # AND CREATE OUR OUTPUT DATAFRAME
+    dat = pd.DataFrame()
+    # FIRST WE GET ALL OF THE ROWS FOR A GIVEN SUBJECT
+    for id in ids:
+        subj = pacdat[pacdat.ID==id]
+        # NOW WE NEED TO FIND OUT WHAT VISITS THERE ARE FOR THIS SUBJECT 
+        # IT IS POSSIBLE THAT THERE ARE MISSING VISIT NUMBERS SO WE NEED
+        # TO MAKE SURE WE ACCOUNT FOR THAT BY ONLY CYCLING THROUGH EXISTING 
+        # VISIT NUMBERS AKA this_visit
+        visits = list(set(subj.this_visit))
+        for v in visits:
+            subvis = subj[subj.this_visit==v]
+            # NEXT WE NEED TO EXCLUDE NON-EEG CHANNELS WHICH WE WILL DO
+            # ONE AT A TIME BECAUSE SOME SUBJECTS MAY OR MAY NOT HAVE 
+            # ALL THREE CHNNELS WE WANT TO EXCLUDE 
+            subvis = subvis[(subvis.channel!='X')]
+            subvis = subvis[(subvis.channel!='Y')]
+            subvis = subvis[(subvis.channel!='BLANK')]
+            # NEXT WE SORT CHANNELS
+            subvis = subvis.sort_values(by=['channel'])
+            # AND THEN EXCLUDE FILENAME COLUMN SO THAT ALL COLUMN VALUES APART
+            # FROM SPECTRAL POWER ARE ALL IDENTICAL
+            subvis = subvis.loc[:, subvis.columns != 'eeg_file_name']
+            # NOW FOR THE RESHAPING INTO A SINGLE ROW
+            chan_Hz = subvis.pivot(index='ID',columns='channel',values=['delta','theta','alpha','low_beta','high_beta','gamma'])
+            # CREATE COLUMN LABELS OF CHANNEL_FREQUENCY BAND
+            chan_Hz.columns = chan_Hz.columns.swaplevel().map('_'.join)
+            # CLEAN UP chan_Hz FOR CONCATENATION
+            chan_Hz = chan_Hz.reset_index()
+            chan_Hz = chan_Hz.drop('ID',axis=1)
+            # WE JUST NEED THE FIRST ROW OF THE DATAFRAME FOR THIS SUBJECT-VISIT
+            orig_row = pd.DataFrame(data=subvis.iloc[0,:].values,index=subvis.iloc[0,:].index).T
+            orig_row = orig_row.drop(['channel','task','delta','theta','alpha','low_beta','high_beta','gamma'], axis=1)
+            orig_row['chan_num'] = len(subvis.channel)
+
+            fin = pd.concat([orig_row,chan_Hz],axis=1)
+            
+            dat = pd.concat([dat,fin])
+            
 if do_deep_learn:
+
+    # OPEN QUESTIONS 
+    # WITH RESPECT TO CHANNEL X FREQ COMBINATIONS HOW MANY INPUTS ARE TOO MANY INPUTS?
 
     from tensorflow.keras.models import Sequential
     from tensorflow.keras.layers import Dense, LeakyReLU, BatchNormalization, Dropout
