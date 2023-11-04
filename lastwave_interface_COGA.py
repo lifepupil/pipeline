@@ -44,8 +44,8 @@ do_plot_eeg_signal_and_mwt = False  # TO PLOT SIGNAL AND HEATMAP FOR A GIVEN FIL
 do_filter_eeg_signal_cnt = False    # TO DO LOW PASS, HIGH PASS, NOTCH FILTER TO REMOVE LINE NOISE FROM SIGNAL, AND ICA
 make_data_table = False              # GENERATED A DATA TABLE WITH DEMOGRAPHIC INFO, ALCOHOLISM STATUS, AND MACHINE LEARNING INPUTS, E.G. BAND POWER
 do_stats = False                   # FOR TRADITIONAL STATISTICAL ANALYSIS 
-do_reshape_by_subject = True       # RESHAPES pacdat SO THAT EACH ROW IS ONE SUBJECT-VISIT WITH ALL CHANNELS AT ALL FREQUENCY BANDS
-do_deep_learn = False               # USES DATA TABLE AS INPUT TO DEEP LEARNING NETWORK TRAINING AND TESTING
+do_reshape_by_subject = False       # RESHAPES pacdat SO THAT EACH ROW IS ONE SUBJECT-VISIT WITH ALL CHANNELS AT ALL FREQUENCY BANDS
+do_deep_learn = True               # USES DATA TABLE AS INPUT TO DEEP LEARNING NETWORK TRAINING AND TESTING
 
 # PARAMETERS
 base_dir = "E:\\Documents\\COGA_eec\\data\\"
@@ -522,8 +522,13 @@ if do_reshape_by_subject:
     ids = list(ids)
     # AND CREATE OUR OUTPUT DATAFRAME
     dat = pd.DataFrame()
+    # LET'S SET UP A COUNTER SO WE CAN TRACK PROGRESS OF RESHAPING
+    sub_count  = 0
+    total_sub = len(ids)
     # FIRST WE GET ALL OF THE ROWS FOR A GIVEN SUBJECT
     for id in ids:
+        sub_count += 1
+        print('Working on subject ' + str(sub_count) + ' of ' + str(total_sub) + ' subjects')
         subj = pacdat[pacdat.ID==id]
         # NOW WE NEED TO FIND OUT WHAT VISITS THERE ARE FOR THIS SUBJECT 
         # IT IS POSSIBLE THAT THERE ARE MISSING VISIT NUMBERS SO WE NEED
@@ -538,6 +543,14 @@ if do_reshape_by_subject:
             subvis = subvis[(subvis.channel!='X')]
             subvis = subvis[(subvis.channel!='Y')]
             subvis = subvis[(subvis.channel!='BLANK')]
+            # IT APPEARS THAT THERE IS AT LEAST ONE SUBJECT-VISIT WITH THE 
+            # SAME this_visit VALUE FOR TWO DIFFERENT FILES SO WE NEED TO 
+            # SCREEN FOR THIS AND AT LEAST FOR NOW NOTE IT IN AN ERROR FILE
+            if not subvis['channel'].is_unique:
+                with open(base_dir + 'errors_from_reshape.txt', 'a') as ff:
+                    fn = '_'.join(subvis['eeg_file_name'].iloc[0].split('_')[1:])
+                    ff.write(str(id) + '\tFILENAME ' + fn + ' DUPLICATE VISITS\n')
+                continue
             # NEXT WE SORT CHANNELS
             subvis = subvis.sort_values(by=['channel'])
             # AND THEN EXCLUDE FILENAME COLUMN SO THAT ALL COLUMN VALUES APART
@@ -559,39 +572,45 @@ if do_reshape_by_subject:
             
             dat = pd.concat([dat,fin])
             
+    # WE SORT THE DATAFRAME FOR HUMAN READABILITY
+    dat = dat.sort_values(['ID','this_visit'], ascending=True)
+    # FINALLY WE SAVE THE RESHAPED TABLE
+    dat.to_csv(base_dir + 'chan_hz_dat' + '.csv', index=False)
+            
 if do_deep_learn:
 
     # OPEN QUESTIONS 
     # WITH RESPECT TO CHANNEL X FREQ COMBINATIONS HOW MANY INPUTS ARE TOO MANY INPUTS?
-
+    
     from tensorflow.keras.models import Sequential
     from tensorflow.keras.layers import Dense, LeakyReLU, BatchNormalization, Dropout
     from sklearn.model_selection import GroupShuffleSplit
     import keras as ks
     
-    # OPEN pacdat DATA TABLE
-    pacdat = pd.read_csv(write_dir + 'pacdat.csv')
+    write_dir = "E:\\Documents\\COGA_eec\\data\\"
+    # OPEN dat DATA TABLE
+    dat = pd.read_csv(write_dir + 'chan_hz_dat.csv')
     # EXCLUDE ROWS WITH NAs
-    pacdat = pacdat.dropna()
+    # dat = dat.dropna()
     # REMOVE CHANNELS THAT ARE TOO SHORT IN DURATION - DUR > 180 SECONDS  (ALSO TOO LONG?)
-    # TRAIN NETWORK ON CHANNEL AT A TIME OR CHANNELS IN SAME REGION, E.G. CENTRAL CHANNELS
-    dl = pacdat[(pacdat.duration>=90) & (pacdat.channel=='CZ')]
-    # REMOVE COLUMNS THAT ARE NOT NEEDED, E.G. UNLESS DOING LSTM LEAVE OUT VISIT ORDER
-    dl = dl[['sex','channel','age_this_visit','delta','theta','alpha','low_beta','high_beta','gamma','alcoholic']]
+    dl = dat[(dat.duration>=90)]
+    # # REMOVE COLUMNS THAT ARE NOT NEEDED, E.G. UNLESS DOING LSTM LEAVE OUT VISIT ORDER
+    # dl = dl[['sex','channel','age_this_visit','delta','theta','alpha','low_beta','high_beta','gamma','alcoholic']]
     # RECODE CATEGORICAL VALUES TO NUMERICS
     dl['alcoholic'] = [1 if alc == True else 0 for alc in dl['alcoholic']]
     # SPLIT TABLE INTO SEPARATE TABLES FOR INPUT AND OUTPUT VARIABLES
     outp = dl['alcoholic']
-    inp = dl.iloc[:,3:8]
+    inp = dl.iloc[:,22:207]
     
-    leaky_relu = LeakyReLU(alpha=0.001)
+    leaky_relu = LeakyReLU(alpha=0.01)
+    
     model = Sequential()
     model.add(BatchNormalization())
     model.add(Dense(30, input_shape=(len(inp.columns),), activation='elu'))
-    model.add(Dropout(0.2))
-    model.add(BatchNormalization())
+    # model.add(Dropout(0.2))
+    # model.add(BatchNormalization())
     model.add(Dense(12, activation='leaky_relu'))
-    model.add(Dropout(0.2))
+    # model.add(Dropout(0.2))
     model.add(Dense(1, activation='sigmoid'))
     
     optimizer = ks.optimizers.Adam(learning_rate=0.001)
