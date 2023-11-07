@@ -580,7 +580,10 @@ if do_reshape_by_subject:
 if do_deep_learn:
 
     # OPEN QUESTIONS 
-    # WITH RESPECT TO CHANNEL X FREQ COMBINATIONS HOW MANY INPUTS ARE TOO MANY INPUTS?
+    # 1. WITH RESPECT TO CHANNEL X FREQ COMBINATIONS HOW MANY INPUTS ARE TOO MANY INPUTS?
+    # 2. HOW MANY NODES IN FIRST LAYER GIVEN SIZE OF INPUT, E.G. 30 NODES FOR 185 INPUTS NOT SUFFICIENT
+    # 
+    # 
     
     from tensorflow.keras.models import Sequential
     from tensorflow.keras.layers import Dense, LeakyReLU, BatchNormalization, Dropout
@@ -602,14 +605,18 @@ if do_deep_learn:
     outp = dl['alcoholic']
     inp = dl.iloc[:,22:207]
     
-    leaky_relu = LeakyReLU(alpha=0.01)
+    leaky_relu = LeakyReLU(alpha=0.0001)
     
     model = Sequential()
-    model.add(BatchNormalization())
-    model.add(Dense(30, input_shape=(len(inp.columns),), activation='elu'))
+    # model.add(BatchNormalization())
+    model.add(Dense(20, input_shape=(len(inp.columns),), activation='elu'))
     # model.add(Dropout(0.2))
     # model.add(BatchNormalization())
-    model.add(Dense(12, activation='leaky_relu'))
+    model.add(Dense(20, activation='relu'))
+    model.add(Dense(25, activation='relu'))
+    model.add(Dense(50, activation='relu'))
+    model.add(Dense(25, activation='relu'))
+    model.add(Dense(50, activation='leaky_relu'))
     # model.add(Dropout(0.2))
     model.add(Dense(1, activation='sigmoid'))
     
