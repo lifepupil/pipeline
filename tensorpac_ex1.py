@@ -88,7 +88,7 @@ if 1:
 
 # define a :class:`tensorpac.Pac` object and use the MVL as the main method
 # for measuring PAC
-p = Pac(idpac=(6, 2, 4), f_pha=(1, 8, 1, 1), f_amp=(12, 50, 5, 1),
+p = Pac(idpac=(5, 2, 4), f_pha=(1, 8, 1, .2), f_amp=(12, 50, 5, 1),
         dcomplex='wavelet', width=12)
 
 # Now, extract all of the phases and amplitudes
@@ -99,7 +99,7 @@ amplitudes = p.filter(sf, data, ftype='amplitude')
 plt.figure(figsize=(16, 12))
 for i, k in enumerate(range(4)):
     # change the pac method
-    p.idpac = (6, k, 4)
+    p.idpac = (5, k, 4)
     # compute only the pac without filtering
     xpac = p.fit(phases, amplitudes, n_perm=400, p=0.05, mcp='fdr')
     # plot

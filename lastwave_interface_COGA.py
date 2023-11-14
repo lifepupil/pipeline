@@ -526,7 +526,7 @@ if do_reshape_by_subject:
     sub_count  = 0
     total_sub = len(ids)
     # FIRST WE GET ALL OF THE ROWS FOR A GIVEN SUBJECT
-    for id in ids:
+    for id in ids: 
         sub_count += 1
         print('Working on subject ' + str(sub_count) + ' of ' + str(total_sub) + ' subjects')
         subj = pacdat[pacdat.ID==id]
