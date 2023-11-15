@@ -44,8 +44,8 @@ do_plot_eeg_signal_and_mwt = False  # TO PLOT SIGNAL AND HEATMAP FOR A GIVEN FIL
 do_filter_eeg_signal_cnt = False    # TO DO LOW PASS, HIGH PASS, NOTCH FILTER TO REMOVE LINE NOISE FROM SIGNAL, AND ICA
 make_data_table = False              # GENERATED A DATA TABLE WITH DEMOGRAPHIC INFO, ALCOHOLISM STATUS, AND MACHINE LEARNING INPUTS, E.G. BAND POWER
 do_stats = False                   # FOR TRADITIONAL STATISTICAL ANALYSIS 
-do_reshape_by_subject = True       # RESHAPES pacdat SO THAT EACH ROW IS ONE SUBJECT-VISIT WITH ALL CHANNELS AT ALL FREQUENCY BANDS
-do_deep_learn = False               # USES DATA TABLE AS INPUT TO DEEP LEARNING NETWORK TRAINING AND TESTING
+do_reshape_by_subject = False       # RESHAPES pacdat SO THAT EACH ROW IS ONE SUBJECT-VISIT WITH ALL CHANNELS AT ALL FREQUENCY BANDS
+do_deep_learn = True               # USES DATA TABLE AS INPUT TO DEEP LEARNING NETWORK TRAINING AND TESTING
 
 # PARAMETERS
 base_dir = "E:\\Documents\\COGA_eec\\data\\"
@@ -594,7 +594,8 @@ if do_reshape_by_subject:
     # WE SORT THE DATAFRAME FOR HUMAN READABILITY
     dat = dat.sort_values(['ID','this_visit'], ascending=True)
     # FINALLY WE SAVE THE RESHAPED TABLE
-    dat.to_csv(base_dir + 'chan_hz_dat' + '.csv', index=False)
+    # dat.to_csv(base_dir + 'chan_hz_dat' + '.csv', index=False)
+    dat.to_pickle(base_dir  + 'chan_hz_dat.pkl')
             
 if do_deep_learn:
 
@@ -611,13 +612,19 @@ if do_deep_learn:
     
     write_dir = "E:\\Documents\\COGA_eec\\data\\"
     # OPEN dat DATA TABLE
-    dat = pd.read_csv(write_dir + 'chan_hz_dat.csv')
+    # dat = pd.read_csv(write_dir + 'chan_hz_dat.csv')
+    dat =  pd.read_pickle(base_dir  + 'chan_hz_dat.pkl')
+    
     # EXCLUDE ROWS WITH NAs
     # dat = dat.dropna()
+    
     # REMOVE CHANNELS THAT ARE TOO SHORT IN DURATION - DUR > 180 SECONDS  (ALSO TOO LONG?)
-    dl = dat[(dat.duration>=90)]
+    # ALSO NEED AT LEAST RIGHT NOW TO EXCLUDE ANY IMAGES THAT AREN'T MADE UP OF 61 CHANNELS 
+    dl = dat[(dat.duration>=90) and (dat.chan_num==61)]
+    
     # # REMOVE COLUMNS THAT ARE NOT NEEDED, E.G. UNLESS DOING LSTM LEAVE OUT VISIT ORDER
     # dl = dl[['sex','channel','age_this_visit','delta','theta','alpha','low_beta','high_beta','gamma','alcoholic']]
+    
     # RECODE CATEGORICAL VALUES TO NUMERICS
     dl['alcoholic'] = [1 if alc == True else 0 for alc in dl['alcoholic']]
     # SPLIT TABLE INTO SEPARATE TABLES FOR INPUT AND OUTPUT VARIABLES
