@@ -48,12 +48,13 @@ sf = 500       # sampling frequency
 
 # pth = "C:\\Users\\crichard\\Downloads\\data.txt"
 
-# pth = "D:\\COGA_eec\\\cleaned_data\\CZ_eec_1_a1_10006015_cnt_256.csv"
-# pth = "D:\\COGA_eec\\\cleaned_data\\CZ_eec_3_b1_10006015_32_cnt_500.csv"
-# pth = "D:\\COGA_eec\\\cleaned_data\\CZ_eec_3_c1_10006015_32_cnt_500.csv"
-# pth = "D:\\COGA_eec\\\cleaned_data\\CZ_eec_3_d1_10006015_32_cnt_500.csv"
-pth = "D:\\COGA_eec\\\cleaned_data\\CZ_eec_4_e1_10006015_32_cnt_500.csv"
-# pth = "D:\\COGA_eec\\\cleaned_data\\CZ_eec_4_f1_10006015_32_cnt_500.csv"
+# pth = "D:\\COGA_eec\\cleaned_data\\CZ_eec_1_a1_10006015_cnt_256.csv"
+# pth = "D:\\COGA_eec\\cleaned_data\\CZ_eec_3_b1_10006015_32_cnt_500.csv"
+# pth = "D:\\COGA_eec\\cleaned_data\\CZ_eec_3_c1_10006015_32_cnt_500.csv"
+# pth = "D:\\COGA_eec\\cleaned_data\\CZ_eec_3_d1_10006015_32_cnt_500.csv"
+# pth = "D:\\COGA_eec\\cleaned_data\\CZ_eec_4_e1_10006015_32_cnt_500.csv"
+pth = "D:\\COGA\\data_for_mwt\\AF1_ant_7_l1_40039009_32.cnt_500.csv"
+
 
 # pth = "D:\\COGA_eec\\\cleaned_data\\CZ_eec_1_a1_10158001_cnt_256.csv"
 # pth = "D:\\COGA_eec\\\cleaned_data\\CZ_eec_4_l1_10158001_32_cnt_500.csv"
@@ -111,3 +112,8 @@ for i, k in enumerate(range(4)):
 plt.tight_layout()
 
 plt.show()
+
+import seaborn as sns
+x = xpac.mean(-1)
+# sns.heatmap(np.flip(x,0), cmap='Reds')
+sns.heatmap(np.flip(x,0), cmap='hsv', xticklabels=False,yticklabels=False, cbar=False)
