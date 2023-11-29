@@ -44,8 +44,9 @@ do_plot_eeg_signal_and_mwt = False  # TO PLOT SIGNAL AND HEATMAP FOR A GIVEN FIL
 do_filter_eeg_signal_cnt = False    # TO DO LOW PASS, HIGH PASS, NOTCH FILTER TO REMOVE LINE NOISE FROM SIGNAL, AND ICA
 make_data_table = False              # GENERATED A DATA TABLE WITH DEMOGRAPHIC INFO, ALCOHOLISM STATUS, AND MACHINE LEARNING INPUTS, E.G. BAND POWER
 do_stats = False                   # FOR TRADITIONAL STATISTICAL ANALYSIS 
-do_reshape_by_subject = False       # RESHAPES pacdat SO THAT EACH ROW IS ONE SUBJECT-VISIT WITH ALL CHANNELS AT ALL FREQUENCY BANDS
-do_deep_learn = True               # USES DATA TABLE AS INPUT TO DEEP LEARNING NETWORK TRAINING AND TESTING
+do_reshape_by_subject = True       # RESHAPES pacdat SO THAT EACH ROW IS ONE SUBJECT-VISIT WITH ALL CHANNELS AT ALL FREQUENCY BANDS
+do_deep_learn = False               # USES DATA TABLE AS INPUT TO DEEP LEARNING NETWORK TRAINING AND TESTING
+generate_pac_images = False
 
 # PARAMETERS
 base_dir = "E:\\Documents\\COGA_eec\\data\\"
@@ -130,6 +131,10 @@ if do_filter_eeg_signal_cnt:
     mpl.rcParams['figure.dpi'] = 300 # DETERMINES THE RESOLUTION OF THE EEG PLOTS
     eye_blink_chans = ['X', 'Y'] # NAMES OF CHANNELS CONTAINING EOG
     institutionDir = 'washu' # suny, indiana, iowa, uconn, ucsd, washu
+
+
+if generate_pac_images:
+    pac_path = 'D:\\COGA_eec\\pac_figures\\'
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -513,16 +518,23 @@ if do_stats:
     
 if do_reshape_by_subject:
     import seaborn as sns
+    from PIL import Image
+    
+    exclude_chans = ['C5', 'TP7', 'P6', 'CP3', 'POZ', 'P1', 'C2', 'C1', 'OZ', 'FC4', 'FPZ', 'F5', 'FT7', 'F6', 'FC3', 'CP4', 'PO7', 'F1', 'TP8', 'CPZ', 'P2', 'FT8', 'PO8', 'AFZ', 'AF7', 'FCZ', 'P5', 'F2', 'AF8', 'C6']
     
     # OPEN pacdat DATA TABLE
     pacdat = pd.read_csv(write_dir + 'pacdat.csv')
     # EXCLUDE ROWS WITH NAs
     pacdat = pacdat.dropna()
+    # GET LIST OF ALL FILES USED TO GENERATE pacdat
+    paclist = set(['_'.join(il.split('_')[1:]) for il in pacdat.eeg_file_name])
+    # LET'S GET A LIST OF ALL THE SUBJECT IDs THAT NEED TO BE PROCESSED
+    imgList = csd.get_file_list('D:\\COGA_eec\\chan_hz_figures\\', 'jpg')
+    imgList = set([f[1][:-4] for f in imgList])   
+    remaining = paclist.difference(imgList)
+    ids = list([int(s.split('_')[3]) for s in remaining])
     
-    # LET'S GET A LIST OF ALL THE SUBJECT IDs
-    ids = set(pacdat.ID)
-    ids = list(ids)
-    # AND CREATE OUR OUTPUT DATAFRAME
+    # CREATE OUR OUTPUT DATAFRAME
     dat = pd.DataFrame()
     # LET'S SET UP A COUNTER SO WE CAN TRACK PROGRESS OF RESHAPING
     sub_count  = 0
@@ -539,12 +551,18 @@ if do_reshape_by_subject:
         visits = list(set(subj.this_visit))
         for v in visits:
             subvis = subj[subj.this_visit==v]
+            
             # NEXT WE NEED TO EXCLUDE NON-EEG CHANNELS WHICH WE WILL DO
             # ONE AT A TIME BECAUSE SOME SUBJECTS MAY OR MAY NOT HAVE 
             # ALL THREE CHNNELS WE WANT TO EXCLUDE 
             subvis = subvis[(subvis.channel!='X')]
             subvis = subvis[(subvis.channel!='Y')]
             subvis = subvis[(subvis.channel!='BLANK')]
+            # SINCE NOT ALL RECORDING SESSIONS USED 31 CHANNELS WE NEED TO 
+            # EXCLUDE THE EXTRA CHANNELS TO HAVE CONSISTENCE IN THE 
+            # CHANNEL X FREQUENCY BAND IMAGES
+            if len(subvis.channel)==61:
+                subvis = subvis[subvis.channel.isin(exclude_chans)==False]
             # IT APPEARS THAT THERE IS AT LEAST ONE SUBJECT-VISIT WITH THE 
             # SAME this_visit VALUE FOR TWO DIFFERENT FILES SO WE NEED TO 
             # SCREEN FOR THIS AND AT LEAST FOR NOW NOTE IT IN AN ERROR FILE
@@ -553,11 +571,17 @@ if do_reshape_by_subject:
                     fn = '_'.join(subvis['eeg_file_name'].iloc[0].split('_')[1:])
                     ff.write(str(id) + '\tFILENAME ' + fn + ' DUPLICATE VISITS\n')
                 continue
-            # NEXT WE SORT CHANNELS
+            # NEXT WE SORT CHANNELS FOR STANDARDIZATION OF LATER CHAN x FREQ JPG
             subvis = subvis.sort_values(by=['channel'])
             # AND THEN EXCLUDE FILENAME COLUMN SO THAT ALL COLUMN VALUES APART
             # FROM SPECTRAL POWER ARE ALL IDENTICAL
+            # BUT FIRST WE GRAB THE SHARED FILE NAME STRING SO WE CAN USE IT 
+            # LATER TO SAVE OUR HEATMAP OF THE CHANNEL X FREQUENCY BAND HEATMAP
+            figFN =  '_'.join(subvis['eeg_file_name'].iloc[0].split('_')[1:]) + '.jpg'            
+
             subvis = subvis.loc[:, subvis.columns != 'eeg_file_name']
+            
+            
             
             # THIS BLOCK ALLOWS TO TO PUT ALL CHANNELS AND FREQUENCY BANDS INTO A VECTOR
             if 0:
@@ -570,25 +594,43 @@ if do_reshape_by_subject:
                 chan_Hz = chan_Hz.drop('ID',axis=1)
             
             # THIS BLOCK CAN BE USED TO TURN MATRIX OF VALUES INTO AN IMAGE
-            # AND WAS DONE BEFORE REALIZING THAT CONVOLUTIONAL LAYER TAKES 
-            # A MATRIX OF VALUE RATHER THAN AN ACTUAL IMAGE
-            # dta = np.sqrt(subvis[['delta','theta','alpha']])
-            # lhbg = np.sqrt(subvis[['low_beta','high_beta','gamma']])
-            # fbs = dta.join(lhbg)
-            # img = sns.heatmap(fbs,vmin=0,vmax=1, xticklabels=False,yticklabels=False, cbar=False,cmap='hsv')
+            if 1:
+                dta = np.sqrt(subvis[['delta','theta','alpha']])
+                lhbg = np.sqrt(subvis[['low_beta','high_beta','gamma']])
+                fbs = dta.join(lhbg)
+                img = sns.heatmap(fbs,vmin=0,vmax=1, xticklabels=False,yticklabels=False, cbar=False,cmap='hsv')
+                # NOW WE SAVE IT
+                fig = plt.Axes.get_figure(img)
+                # FINALLY WE SAVE IT AS A JPG -    THIS WILL BE IMPORTANT FOR RESIZING 
+                # THIS IMAGE FOR RESNET-50 USING PIL PACKAGE 
+                fig.savefig(write_dir + 'chan_hz_figures\\' + figFN, bbox_inches='tight')
+                
+            # THIS BLOCK USED TO RESIZE IMAGES FOR RESNET-50
+            if 0:
+                img2 = Image.open(write_dir + 'chan_hz_figures\\' + figFN)
+                img2 = img2.resize((224, 224))
+                img2.save(write_dir + 'chan_hz_figures\\' + figFN)
+            
+            # plt.plot(this_chan)
+            # # plt.ylim((-50/1000000),(50/1000000))
+            # plt.title(ch + ', ' + institutionDir.upper() + ' -- ' + fname[:-4])
+            # # plt.show()
+            # plt.savefig(write_dir + 'eeg_figures\\' + figFN)
+            # plt.clf()            
+            
             
             # THIS BLOCK GIVES US ALL SUBJECT INFO INTO ONE ROW
             # WE JUST NEED THE FIRST ROW OF THE DATAFRAME FOR THIS SUBJECT-VISIT
             orig_row = pd.DataFrame(data=subvis.iloc[0,:].values,index=subvis.iloc[0,:].index).T
             orig_row = orig_row.drop(['channel','task','delta','theta','alpha','low_beta','high_beta','gamma'], axis=1)
             orig_row['chan_num'] = len(subvis.channel)
-            # fin = pd.concat([orig_row,chan_Hz],axis=1)
+            
+            # # fin = pd.concat([orig_row,chan_Hz],axis=1)
+            # img = subvis[['delta','theta','alpha','low_beta','high_beta','gamma']]
+            # img = img.to_numpy()
+            # orig_row['chan_hz'] = [img]
 
-            img = subvis[['delta','theta','alpha','low_beta','high_beta','gamma']]
-            img = img.to_numpy()
-            
-            orig_row['chan_hz'] = [img]
-            
+            orig_row['chan_hz_path'] =  write_dir + 'chan_hz_figures\\' + figFN
             dat = pd.concat([dat,orig_row])
             
     # WE SORT THE DATAFRAME FOR HUMAN READABILITY
