@@ -517,6 +517,20 @@ if do_stats:
     ancova(data=dt[dt['sex']=='M'], dv='high_beta', covar='age_this_visit', between='alcoholic')
     
 if do_reshape_by_subject:
+    # READ ME !!!
+    # NOTA BENE:
+    # AS OF NOVEMBER 30, 2023 THIS CODE NEEDS TO BE REFACTORED TO PERMIT THE 
+    # REASONABLY FAST GENERATION OF CHANNEL X FERQUENCY BAND IMAGES, THE
+    # CONVERSION OF THOSE IMAGES TO 224 X 224 SPECIFICATIONS REQUIRED BY 
+    # RESNET-50, OR THE GENERATION OF A SUBJECT-VISIT TABLE SAVED AS A PICKLE
+    # FILE. iF YOU TRY TO RUN ALL OF THEM AT THE SAME TIME, PROCESSING WILL 
+    # MOVE AT A SNAILS PACE, BUT IF THEY ARE RUN SEPARATELY THEN THEY ARE 
+    # MUCH, *MUCH* FASTER (HENCE THE NEED TO REFACTOR THIS CODE)
+    # FINALLY THE USE OF do_reshape_by_subject STILL HAS MOST LINES, 
+    # COMMENTED OUT, TO ADD A VECTOR OF CHANNEL X FREQUENCY BAND TO THE TABLE
+    # HOWEVER SINCE IT PERFORMED SO BADLY AS INPUT INTO OUR DEEP LEARNING
+    # MODEL, THESE LINES HAVE ONLY BEEN KEPT FOR UNLIKELY LEGACY PURPOSES 
+    
     import seaborn as sns
     from PIL import Image
     
@@ -529,20 +543,44 @@ if do_reshape_by_subject:
     # GET LIST OF ALL FILES USED TO GENERATE pacdat
     paclist = set(['_'.join(il.split('_')[1:]) for il in pacdat.eeg_file_name])
     # LET'S GET A LIST OF ALL THE SUBJECT IDs THAT NEED TO BE PROCESSED
-    imgList = csd.get_file_list('D:\\COGA_eec\\chan_hz_figures\\', 'jpg')
+    imgList = csd.get_file_list('D:\\COGA_eec\\chan_hz_figures\\', 'jjpg')
     imgList = set([f[1][:-4] for f in imgList])   
     remaining = paclist.difference(imgList)
-    ids = list([int(s.split('_')[3]) for s in remaining])
+    ids = set([int(s.split('_')[3]) for s in remaining])
     
     # CREATE OUR OUTPUT DATAFRAME
-    dat = pd.DataFrame()
+    pacColumns = ['ID',
+     'site',
+     'sex',
+     'race',
+     'hispanic',
+     'duration',
+     'this_visit',
+     'this_run',
+     'total_visits',
+     'age_this_visit',
+     'AUD_this_visit',
+     'ALAB_this_visit',
+     'ALD_this_visit',
+     'visits_before_AUD',
+     'visits_before_ALAB',
+     'visits_before_ALD',
+     'AUD_now',
+     'ALAB_now',
+     'ALD_now',
+     'interview_quality',
+     'alcoholic',
+     'chan_num',
+     'chan_hz_path']
+    
+    dat = pd.DataFrame(index=range(len(paclist)), columns=pacColumns)
+    # dat = pd.DataFrame(index=range(len(ids), columns=range(len(pacdat.columns)))
+    
     # LET'S SET UP A COUNTER SO WE CAN TRACK PROGRESS OF RESHAPING
     sub_count  = 0
     total_sub = len(ids)
     # FIRST WE GET ALL OF THE ROWS FOR A GIVEN SUBJECT
     for id in ids: 
-        sub_count += 1
-        print('Working on subject ' + str(sub_count) + ' of ' + str(total_sub) + ' subjects')
         subj = pacdat[pacdat.ID==id]
         # NOW WE NEED TO FIND OUT WHAT VISITS THERE ARE FOR THIS SUBJECT 
         # IT IS POSSIBLE THAT THERE ARE MISSING VISIT NUMBERS SO WE NEED
@@ -561,7 +599,8 @@ if do_reshape_by_subject:
             # SINCE NOT ALL RECORDING SESSIONS USED 31 CHANNELS WE NEED TO 
             # EXCLUDE THE EXTRA CHANNELS TO HAVE CONSISTENCE IN THE 
             # CHANNEL X FREQUENCY BAND IMAGES
-            if len(subvis.channel)==61:
+            orig_channum = len(subvis.channel)
+            if orig_channum==61:
                 subvis = subvis[subvis.channel.isin(exclude_chans)==False]
             # IT APPEARS THAT THERE IS AT LEAST ONE SUBJECT-VISIT WITH THE 
             # SAME this_visit VALUE FOR TWO DIFFERENT FILES SO WE NEED TO 
@@ -581,8 +620,6 @@ if do_reshape_by_subject:
 
             subvis = subvis.loc[:, subvis.columns != 'eeg_file_name']
             
-            
-            
             # THIS BLOCK ALLOWS TO TO PUT ALL CHANNELS AND FREQUENCY BANDS INTO A VECTOR
             if 0:
                 # NOW FOR THE RESHAPING INTO A SINGLE ROW
@@ -594,7 +631,7 @@ if do_reshape_by_subject:
                 chan_Hz = chan_Hz.drop('ID',axis=1)
             
             # THIS BLOCK CAN BE USED TO TURN MATRIX OF VALUES INTO AN IMAGE
-            if 1:
+            if 0:
                 dta = np.sqrt(subvis[['delta','theta','alpha']])
                 lhbg = np.sqrt(subvis[['low_beta','high_beta','gamma']])
                 fbs = dta.join(lhbg)
@@ -608,6 +645,7 @@ if do_reshape_by_subject:
             # THIS BLOCK USED TO RESIZE IMAGES FOR RESNET-50
             if 0:
                 img2 = Image.open(write_dir + 'chan_hz_figures\\' + figFN)
+                print(figFN)
                 img2 = img2.resize((224, 224))
                 img2.save(write_dir + 'chan_hz_figures\\' + figFN)
             
@@ -618,12 +656,11 @@ if do_reshape_by_subject:
             # plt.savefig(write_dir + 'eeg_figures\\' + figFN)
             # plt.clf()            
             
-            
             # THIS BLOCK GIVES US ALL SUBJECT INFO INTO ONE ROW
             # WE JUST NEED THE FIRST ROW OF THE DATAFRAME FOR THIS SUBJECT-VISIT
             orig_row = pd.DataFrame(data=subvis.iloc[0,:].values,index=subvis.iloc[0,:].index).T
             orig_row = orig_row.drop(['channel','task','delta','theta','alpha','low_beta','high_beta','gamma'], axis=1)
-            orig_row['chan_num'] = len(subvis.channel)
+            orig_row['chan_num'] = orig_channum
             
             # # fin = pd.concat([orig_row,chan_Hz],axis=1)
             # img = subvis[['delta','theta','alpha','low_beta','high_beta','gamma']]
@@ -631,8 +668,10 @@ if do_reshape_by_subject:
             # orig_row['chan_hz'] = [img]
 
             orig_row['chan_hz_path'] =  write_dir + 'chan_hz_figures\\' + figFN
-            dat = pd.concat([dat,orig_row])
-            
+            # dat = pd.concat([dat,orig_row])
+            dat.iloc[sub_count,:] = orig_row.iloc[0,:]
+            sub_count += 1
+
     # WE SORT THE DATAFRAME FOR HUMAN READABILITY
     dat = dat.sort_values(['ID','this_visit'], ascending=True)
     # FINALLY WE SAVE THE RESHAPED TABLE
