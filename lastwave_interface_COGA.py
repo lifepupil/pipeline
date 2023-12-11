@@ -31,7 +31,7 @@ import scipy.stats as stats
 
 # import mne_icalabel as mica
 # from mne_icalabel import label_components
-# import os
+import os
 # import sys
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -44,9 +44,13 @@ do_plot_eeg_signal_and_mwt = False  # TO PLOT SIGNAL AND HEATMAP FOR A GIVEN FIL
 do_filter_eeg_signal_cnt = False    # TO DO LOW PASS, HIGH PASS, NOTCH FILTER TO REMOVE LINE NOISE FROM SIGNAL, AND ICA
 make_data_table = False              # GENERATED A DATA TABLE WITH DEMOGRAPHIC INFO, ALCOHOLISM STATUS, AND MACHINE LEARNING INPUTS, E.G. BAND POWER
 do_stats = False                   # FOR TRADITIONAL STATISTICAL ANALYSIS 
-do_reshape_by_subject = True       # RESHAPES pacdat SO THAT EACH ROW IS ONE SUBJECT-VISIT WITH ALL CHANNELS AT ALL FREQUENCY BANDS
+do_reshape_by_subject = False       # RESHAPES pacdat SO THAT EACH ROW IS ONE SUBJECT-VISIT WITH ALL CHANNELS AT ALL FREQUENCY BANDS
+relocate_images_by_alcoholism = False
 do_deep_learn = False               # USES DATA TABLE AS INPUT TO DEEP LEARNING NETWORK TRAINING AND TESTING
 generate_pac_images = False
+do_resnet_flowers = False
+do_resnet_chanxfreq = True
+
 
 # PARAMETERS
 base_dir = "E:\\Documents\\COGA_eec\\data\\"
@@ -677,7 +681,30 @@ if do_reshape_by_subject:
     # FINALLY WE SAVE THE RESHAPED TABLE
     # dat.to_csv(base_dir + 'chan_hz_dat' + '.csv', index=False)
     dat.to_pickle(base_dir  + 'chan_hz_dat.pkl')
-            
+    
+
+
+
+if relocate_images_by_alcoholism:
+    pth = 'D:\\COGA_eec\\chan_hz_figures\\'
+    alcpth = pth + 'alcoholic\\'
+    nonpth = pth + 'nonalcoholic\\'
+    # OPEN PICKLE FILE
+    dat = pd.read_pickle(base_dir + 'chan_hz_dat.pkl')
+    alc = dat[dat.alcoholic==1]
+    nonalc = dat[dat.alcoholic==0]
+    
+    for i in range(0,len(alc)):
+        thisjpg = alc.iloc[i].chan_hz_path
+        fn = thisjpg.split('\\')[-1]
+        os.rename(thisjpg, alcpth + fn)
+    
+    for i in range(0,len(nonalc)):
+        thisjpg = nonalc.iloc[i].chan_hz_path
+        fn = thisjpg.split('\\')[-1]
+        os.rename(thisjpg, nonpth + fn)
+    
+    
 if do_deep_learn:
 
     # OPEN QUESTIONS 
@@ -690,6 +717,11 @@ if do_deep_learn:
     from tensorflow.keras.layers import Dense, LeakyReLU, BatchNormalization, Dropout
     from sklearn.model_selection import GroupShuffleSplit
     import keras as ks
+    
+    from keras.preprocessing.image import image
+    from keras.preprocessing.image import img_to_array
+    from keras.applications.resnet50 import preprocess_input    
+    from keras.applications.imagenet_utils import decode_predictions
     
     write_dir = "E:\\Documents\\COGA_eec\\data\\"
     # OPEN dat DATA TABLE
@@ -747,10 +779,165 @@ if do_deep_learn:
     
     predictions = (model.predict(inp) > 0.5).astype(int)
             
-
-
     fig, ax = plt.subplots(figsize=(12, 6))
     fig.suptitle(params_dl)
     ax.plot(x, acc, color='red', label='acc')
     ax.plot(x, loss, color='blue', label='loss')
     ax.legend()
+    
+if do_resnet_flowers:
+    # import tensorflow as tf
+    # from tensorflow import keras
+    # from tensorflow.keras import layers
+    # write_dir = 'D:\\COGA_eec\\'
+    # figFN = 'eec_3_d1_20054005_32_cnt_500.jpg'
+    # img = image.image_utils.load_img(write_dir + 'chan_hz_figures\\' + figFN, target_size = (224, 224), axis=2)
+    
+
+    import matplotlib.pyplot as plotter_lib
+    import numpy as np
+    import PIL as image_lib
+    import tensorflow as tflow
+    from tensorflow.keras.layers import Flatten
+    from keras.layers.core import Dense
+    from tensorflow.keras.models import Sequential
+    from tensorflow.keras.optimizers import Adam
+    import cv2
+    
+    import pathlib    
+    demo_dataset = "https://storage.googleapis.com/download.tensorflow.org/example_images/flower_photos.tgz"
+    directory = tflow.keras.utils.get_file('flower_photos', origin=demo_dataset, untar=True)
+    data_directory = pathlib.Path(directory)
+    
+    img_height,img_width=180,180
+    batch_size=32
+    
+    train_ds = tflow.keras.preprocessing.image_dataset_from_directory(
+      data_directory,
+      validation_split=0.2,
+      subset="training",
+      seed=123,
+      label_mode='categorical',
+      image_size=(img_height, img_width),
+      batch_size=batch_size)
+    
+    validation_ds = tflow.keras.preprocessing.image_dataset_from_directory(
+        data_directory,
+        validation_split=0.2,
+        subset="validation",
+        seed=123,
+        label_mode='categorical',
+        image_size=(img_height, img_width),
+        batch_size=batch_size)
+    
+    plotter_lib.figure(figsize=(10, 10))    
+    epochs=10
+    for images, labels in train_ds.take(1):
+      for var in range(6):
+        ax = plt.subplot(3, 3, var + 1)
+        plotter_lib.imshow(images[var].numpy().astype("uint8"))
+        plotter_lib.axis("off")
+        
+    demo_resnet_model = Sequential()
+
+    pretrained_model_for_demo= tflow.keras.applications.ResNet50(include_top=False,
+        input_shape=(180,180,3),
+        pooling='avg',classes=5,
+        weights='imagenet')
+    
+    for each_layer in pretrained_model_for_demo.layers:
+        each_layer.trainable=False
+    demo_resnet_model.add(pretrained_model_for_demo)
+        
+    demo_resnet_model.add(Flatten())
+    demo_resnet_model.add(Dense(512, activation='relu'))
+    demo_resnet_model.add(Dense(5, activation='softmax'))
+    
+    demo_resnet_model.compile(optimizer=Adam(lr=0.001),loss='categorical_crossentropy',metrics=['accuracy'])
+    history = demo_resnet_model.fit(train_ds, validation_data=validation_ds, epochs=epochs)
+    
+    plotter_lib.figure(figsize=(8, 8))
+    epochs_range= range(epochs)
+    plotter_lib.plot( epochs_range, history.history['accuracy'], label="Training Accuracy")
+    plotter_lib.plot(epochs_range, history.history['val_accuracy'], label="Validation Accuracy")
+    plotter_lib.axis(ymin=0.4,ymax=1)
+    plotter_lib.grid()
+    plotter_lib.title('Model Accuracy')
+    plotter_lib.ylabel('Accuracy')
+    plotter_lib.xlabel('Epochs')
+    plotter_lib.legend(['train', 'validation'])
+    #plotter_lib.show()
+    # plotter_lib.savefig('output-plot.png') 
+    
+    
+    
+if do_resnet_chanxfreq:
+    import matplotlib.pyplot as plotter_lib
+    import numpy as np
+    # import PIL as image_lib
+    import tensorflow as tflow
+    from tensorflow.keras.layers import Flatten
+    from keras.layers.core import Dense
+    from tensorflow.keras.models import Sequential
+    from tensorflow.keras.optimizers import Adam
+    # import cv2
+
+    pth = 'D:\\COGA_eec\\chan_hz_figures\\'
+    
+    img_height,img_width=224,224
+    batch_size=32
+    epochs=10
+
+    train_ds = tflow.keras.preprocessing.image_dataset_from_directory(
+      pth,
+      validation_split=0.2,
+      subset="training",
+      seed=123,
+      label_mode='categorical',
+      image_size=(img_height, img_width),
+      batch_size=batch_size)
+    
+    validation_ds = tflow.keras.preprocessing.image_dataset_from_directory(
+        pth,
+        validation_split=0.2,
+        subset="validation",
+        seed=123,
+        label_mode='categorical',
+        image_size=(img_height, img_width),
+        batch_size=batch_size)
+    
+    demo_resnet_model = Sequential()
+
+    pretrained_model_for_demo= tflow.keras.applications.ResNet50(include_top=False,
+        input_shape=(img_height, img_width,3),
+        pooling='avg',classes=2,
+        weights='imagenet')
+    
+    for each_layer in pretrained_model_for_demo.layers:
+        each_layer.trainable=False
+    demo_resnet_model.add(pretrained_model_for_demo)
+        
+    demo_resnet_model.add(Flatten())
+    demo_resnet_model.add(Dense(512, activation='relu'))
+    demo_resnet_model.add(Dense(2, activation='sigmoid'))
+    
+    demo_resnet_model.compile(optimizer=Adam(lr=0.001),loss='categorical_crossentropy',metrics=['accuracy'])
+    history = demo_resnet_model.fit(train_ds, validation_data=validation_ds, epochs=epochs)
+    
+    plotter_lib.figure(figsize=(8, 8))
+    epochs_range= range(epochs)
+    plotter_lib.plot( epochs_range, history.history['accuracy'], label="Training Accuracy")
+    plotter_lib.plot(epochs_range, history.history['val_accuracy'], label="Validation Accuracy")
+    plotter_lib.axis(ymin=0.4,ymax=1)
+    plotter_lib.grid()
+    plotter_lib.title('Model Accuracy')
+    plotter_lib.ylabel('Accuracy')
+    plotter_lib.xlabel('Epochs')
+    plotter_lib.legend(['train', 'validation'])
+    
+
+
+
+    
+    
+    
