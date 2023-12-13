@@ -48,7 +48,6 @@ do_reshape_by_subject = False       # RESHAPES pacdat SO THAT EACH ROW IS ONE SU
 relocate_images_by_alcoholism = False
 do_deep_learn = False               # USES DATA TABLE AS INPUT TO DEEP LEARNING NETWORK TRAINING AND TESTING
 generate_pac_images = False
-do_resnet_flowers = False
 do_resnet_chanxfreq = True
 
 
@@ -489,6 +488,7 @@ if make_data_table:
     # FINALLY WE SAVE THE pacdat TABLE
     pacdat.to_csv(base_dir + 'pacdat' + '.csv', index=False)
 
+
     if whichEEGfileExtention=='cnt':
         # NOW WE EXECUTE THIS CODE TO GET DEMOGRAPHICS FROM SUBJECTS
         tbl = pacdat.copy()
@@ -687,12 +687,15 @@ if do_reshape_by_subject:
 
 if relocate_images_by_alcoholism:
     pth = 'D:\\COGA_eec\\chan_hz_figures\\'
-    alcpth = pth + 'alcoholic\\'
-    nonpth = pth + 'nonalcoholic\\'
+    alcpth = 'D:\\COGA_eec\\chan_hz_25_40yo_M\\alcoholic\\'
+    nonpth = 'D:\\COGA_eec\\chan_hz_25_40yo_M\\nonalcoholic\\'
     # OPEN PICKLE FILE
     dat = pd.read_pickle(base_dir + 'chan_hz_dat.pkl')
-    alc = dat[dat.alcoholic==1]
-    nonalc = dat[dat.alcoholic==0]
+    alc = dat[(dat.alcoholic==1) & (dat.age_this_visit>=25) & (dat.age_this_visit<=40) & (dat.sex=='M')]
+    nonalc = dat[(dat.alcoholic==0) & (dat.age_this_visit>=25) & (dat.age_this_visit<=40) & (dat.sex=='M')]
+    
+    # alc = dat[dat.alcoholic==1]
+    # nonalc = dat[dat.alcoholic==0]
     
     for i in range(0,len(alc)):
         thisjpg = alc.iloc[i].chan_hz_path
@@ -785,144 +788,69 @@ if do_deep_learn:
     ax.plot(x, loss, color='blue', label='loss')
     ax.legend()
     
-if do_resnet_flowers:
-    # import tensorflow as tf
-    # from tensorflow import keras
-    # from tensorflow.keras import layers
-    # write_dir = 'D:\\COGA_eec\\'
-    # figFN = 'eec_3_d1_20054005_32_cnt_500.jpg'
-    # img = image.image_utils.load_img(write_dir + 'chan_hz_figures\\' + figFN, target_size = (224, 224), axis=2)
-    
-
-    import matplotlib.pyplot as plotter_lib
-    import numpy as np
-    import PIL as image_lib
-    import tensorflow as tflow
-    from tensorflow.keras.layers import Flatten
-    from keras.layers.core import Dense
-    from tensorflow.keras.models import Sequential
-    from tensorflow.keras.optimizers import Adam
-    import cv2
-    
-    import pathlib    
-    demo_dataset = "https://storage.googleapis.com/download.tensorflow.org/example_images/flower_photos.tgz"
-    directory = tflow.keras.utils.get_file('flower_photos', origin=demo_dataset, untar=True)
-    data_directory = pathlib.Path(directory)
-    
-    img_height,img_width=180,180
-    batch_size=32
-    
-    train_ds = tflow.keras.preprocessing.image_dataset_from_directory(
-      data_directory,
-      validation_split=0.2,
-      subset="training",
-      seed=123,
-      label_mode='categorical',
-      image_size=(img_height, img_width),
-      batch_size=batch_size)
-    
-    validation_ds = tflow.keras.preprocessing.image_dataset_from_directory(
-        data_directory,
-        validation_split=0.2,
-        subset="validation",
-        seed=123,
-        label_mode='categorical',
-        image_size=(img_height, img_width),
-        batch_size=batch_size)
-    
-    plotter_lib.figure(figsize=(10, 10))    
-    epochs=10
-    for images, labels in train_ds.take(1):
-      for var in range(6):
-        ax = plt.subplot(3, 3, var + 1)
-        plotter_lib.imshow(images[var].numpy().astype("uint8"))
-        plotter_lib.axis("off")
-        
-    demo_resnet_model = Sequential()
-
-    pretrained_model_for_demo= tflow.keras.applications.ResNet50(include_top=False,
-        input_shape=(180,180,3),
-        pooling='avg',classes=5,
-        weights='imagenet')
-    
-    for each_layer in pretrained_model_for_demo.layers:
-        each_layer.trainable=False
-    demo_resnet_model.add(pretrained_model_for_demo)
-        
-    demo_resnet_model.add(Flatten())
-    demo_resnet_model.add(Dense(512, activation='relu'))
-    demo_resnet_model.add(Dense(5, activation='softmax'))
-    
-    demo_resnet_model.compile(optimizer=Adam(lr=0.001),loss='categorical_crossentropy',metrics=['accuracy'])
-    history = demo_resnet_model.fit(train_ds, validation_data=validation_ds, epochs=epochs)
-    
-    plotter_lib.figure(figsize=(8, 8))
-    epochs_range= range(epochs)
-    plotter_lib.plot( epochs_range, history.history['accuracy'], label="Training Accuracy")
-    plotter_lib.plot(epochs_range, history.history['val_accuracy'], label="Validation Accuracy")
-    plotter_lib.axis(ymin=0.4,ymax=1)
-    plotter_lib.grid()
-    plotter_lib.title('Model Accuracy')
-    plotter_lib.ylabel('Accuracy')
-    plotter_lib.xlabel('Epochs')
-    plotter_lib.legend(['train', 'validation'])
-    #plotter_lib.show()
-    # plotter_lib.savefig('output-plot.png') 
-    
     
     
 if do_resnet_chanxfreq:
+    # after unimpressive training using ImageNet,
+    # tried setting weights to None,  
+    # then tried making each_layer trainable 
+    # can also change from categorical to binary label mode and
+    # the loss function fom categorical_crossentropy to binary_crossentropy
+    # can also check that the images are being read in RBG per input_shape 
+    # 224 x 224 x 3 prerequisite using applications.resnet50.preprocess_input
+    
     import matplotlib.pyplot as plotter_lib
     import numpy as np
     # import PIL as image_lib
-    import tensorflow as tflow
+    import tensorflow as tf
     from tensorflow.keras.layers import Flatten
     from keras.layers.core import Dense
     from tensorflow.keras.models import Sequential
     from tensorflow.keras.optimizers import Adam
     # import cv2
 
-    pth = 'D:\\COGA_eec\\chan_hz_figures\\'
+    pth = 'D:\\COGA_eec\\chan_hz_25_40yo_M\\'
     
     img_height,img_width=224,224
     batch_size=32
     epochs=10
 
-    train_ds = tflow.keras.preprocessing.image_dataset_from_directory(
+    train_ds = tf.keras.preprocessing.image_dataset_from_directory(
       pth,
       validation_split=0.2,
       subset="training",
       seed=123,
-      label_mode='categorical',
+      label_mode='binary',
       image_size=(img_height, img_width),
       batch_size=batch_size)
     
-    validation_ds = tflow.keras.preprocessing.image_dataset_from_directory(
+    validation_ds = tf.keras.preprocessing.image_dataset_from_directory(
         pth,
         validation_split=0.2,
         subset="validation",
         seed=123,
-        label_mode='categorical',
+        label_mode='binary',
         image_size=(img_height, img_width),
         batch_size=batch_size)
     
-    demo_resnet_model = Sequential()
+    coga_model = Sequential()
 
-    pretrained_model_for_demo= tflow.keras.applications.ResNet50(include_top=False,
+    pretrained_model_for_demo= tf.keras.applications.ResNet50(include_top=False,
         input_shape=(img_height, img_width,3),
-        pooling='avg',classes=2,
-        weights='imagenet')
+        pooling='avg',
+        classes=2,
+        weights=None)
     
     for each_layer in pretrained_model_for_demo.layers:
-        each_layer.trainable=False
-    demo_resnet_model.add(pretrained_model_for_demo)
+        each_layer.trainable=True
+    coga_model.add(pretrained_model_for_demo)
         
-    demo_resnet_model.add(Flatten())
-    demo_resnet_model.add(Dense(512, activation='relu'))
-    demo_resnet_model.add(Dense(2, activation='sigmoid'))
+    coga_model.add(Flatten())
+    coga_model.add(Dense(512, activation='relu'))
+    coga_model.add(Dense(1, activation='sigmoid'))
     
-    demo_resnet_model.compile(optimizer=Adam(lr=0.001),loss='categorical_crossentropy',metrics=['accuracy'])
-    history = demo_resnet_model.fit(train_ds, validation_data=validation_ds, epochs=epochs)
+    coga_model.compile(optimizer=Adam(learning_rate=0.001),loss=tf.keras.losses.BinaryCrossentropy(),metrics=['accuracy'])
+    history = coga_model.fit(train_ds, validation_data=validation_ds, epochs=epochs)
     
     plotter_lib.figure(figsize=(8, 8))
     epochs_range= range(epochs)
@@ -930,7 +858,7 @@ if do_resnet_chanxfreq:
     plotter_lib.plot(epochs_range, history.history['val_accuracy'], label="Validation Accuracy")
     plotter_lib.axis(ymin=0.4,ymax=1)
     plotter_lib.grid()
-    plotter_lib.title('Model Accuracy')
+    plotter_lib.title('Model Accuracy - age 25-40, Men, binary crossentropy')
     plotter_lib.ylabel('Accuracy')
     plotter_lib.xlabel('Epochs')
     plotter_lib.legend(['train', 'validation'])
