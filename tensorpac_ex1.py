@@ -7,20 +7,22 @@ Created on Thu Jun 15 13:32:42 2023
 
 import matplotlib.pyplot as plt
 
-import os
-import urllib
+# import os
+# import urllib
 
 import numpy as np
-from scipy.io import loadmat
-from scipy.signal import welch
-from scipy.integrate import simps
-
-from tensorpac import Pac, EventRelatedPac, PreferredPhase
-from tensorpac.utils import PeakLockedTF, PSD, ITC, BinAmplitude
-from tensorpac.signals import pac_signals_wavelet
-
 import pandas as pd
-import mne
+import seaborn as sns
+
+# from scipy.io import loadmat
+# from scipy.signal import welch
+# from scipy.integrate import simps
+
+from tensorpac import Pac #, EventRelatedPac, PreferredPhase
+# from tensorpac.utils import PeakLockedTF, PSD, ITC, BinAmplitude
+# from tensorpac.signals import pac_signals_wavelet
+
+# import mne
 
 # filename = os.path.join(os.getcwd(), 'seeg_data_pac.npz')
 # if not os.path.isfile(filename):
@@ -33,87 +35,117 @@ import mne
 # sf = float(arch['sf'])    # sampling frequency
 # times = arch['times']     # time vector
 
+read_dir = "D:\\COGA_eec\\"
 
-
-# f_pha = 6       # frequency phase for the coupling
-# f_amp = 70      # frequency amplitude for the coupling
+f_pha = [0.5, 12]       # frequency range phase for the coupling
+f_amp = [12, 70]      # frequency range amplitude for the coupling
 # n_epochs = 20   # number of trials
 # n_times = 4000  # number of time points
-sf = 500       # sampling frequency
-# data, time = pac_signals_wavelet(sf=sf, f_pha=f_pha, f_amp=f_amp, noise=3.,
+# sample_rate = 500       # sampling frequency
+# data, time = pac_signals_wavelet(sf=sample_rate, f_pha=f_pha, f_amp=f_amp, noise=3.,
 #                                  n_epochs=n_epochs, n_times=n_times)
 
-# fn = "D:\\COGA\\data_for_mwt\\CZ_ant_7_l1_40039009_32.cnt_500.csv"
-# data = np.array(eeg)
+# 10-20 CHANNEL LIST 
+chanList_10_20 = [
+        'FZ',
+        'CZ',
+        'PZ',
+        'OZ',
+        'C3',
+        'C4',
+        'F3',
+        'F4',
+        'F7',
+        'F8',
+        'O1',
+        'O2',
+        'P3',
+        'P4',
+        'T3',
+        'T4',
+        'T5',
+        'T6',
+        'FP1',
+        'FP2']
 
-# pth = "C:\\Users\\crichard\\Downloads\\data.txt"
+pac_method = 5 # USES Phase-Locking Value (PLV) TO GENERATE PAC VALUES
+surrogate_method = 2 # METHOD FOR COMPUTING SURROGATES - Swap amplitude time blocks
+norm_method = 4 # normalization method for correction - z-scores
+# FOR ALL POSSIBLE SETTINGS, SEE:
+#  https://etiennecmb.github.io/tensorpac/generated/tensorpac.Pac.html#tensorpac.Pac
 
-# pth = "D:\\COGA_eec\\cleaned_data\\CZ_eec_1_a1_10006015_cnt_256.csv"
-# pth = "D:\\COGA_eec\\cleaned_data\\CZ_eec_3_b1_10006015_32_cnt_500.csv"
-# pth = "D:\\COGA_eec\\cleaned_data\\CZ_eec_3_c1_10006015_32_cnt_500.csv"
-# pth = "D:\\COGA_eec\\cleaned_data\\CZ_eec_3_d1_10006015_32_cnt_500.csv"
-# pth = "D:\\COGA_eec\\cleaned_data\\CZ_eec_4_e1_10006015_32_cnt_500.csv"
-pth = "D:\\COGA\\data_for_mwt\\AF1_ant_7_l1_40039009_32.cnt_500.csv"
+pacdat = pd.read_csv(read_dir + 'pacdat.csv')
 
-
-# pth = "D:\\COGA_eec\\\cleaned_data\\CZ_eec_1_a1_10158001_cnt_256.csv"
-# pth = "D:\\COGA_eec\\\cleaned_data\\CZ_eec_4_l1_10158001_32_cnt_500.csv"
-
-band_rng = [0.5, 4]
-
-data = np.loadtxt(pth, delimiter=',', skiprows=1)
-
-if 1:
-    time = np.arange(data.size)/500
-    plt.plot(time, data, lw=1.5,color='k')
-    plt.show()
+for c in range(0,len(chanList_10_20)):
+    chpac = pacdat[pacdat.channel==chanList_10_20[c]]
     
-    win_length = (2/band_rng[0])*sf
-    freqs, psd = welch(data , sf, nperseg=win_length)
-    plt.plot(freqs[freqs<80],psd[freqs<80])
-    plt.show()
+    for i in range(0,len(chpac)):
+        sample_rate = int(chpac.iloc[i].eeg_file_name.split('_')[-1])
+        thisFileName = chpac.iloc[i].eeg_file_name    
+        thisPathFileName = read_dir + 'cleaned_data\\' + thisFileName + '.csv'
+        if chpac.iloc[i].alcoholic:
+            img_folder = 'alcoholic\\'
+        else:
+            img_folder = 'nonalcoholic\\'
+        print('Working on ' + chanList_10_20[c] + ', ' + str(i+1) + ' of ' + str(len(chpac)) + ' files' )
+        data = np.loadtxt(thisPathFileName, delimiter=',', skiprows=1)
+        
+        # if 0:
+        #     band_rng = [0.5, 4]
+        
+        #     # GENERATES FIGURE OF EEG SIGNAL
+        #     time = np.arange(data.size)/sample_rate
+        #     plt.plot(time, data, lw=1.5,color='k')
+        #     plt.show()
+        #     # GENERATES PSD FIGURE
+        #     win_length = (2/band_rng[0])*sample_rate
+        #     freqs, psd = welch(data , sample_rate, nperseg=win_length)
+        #     plt.plot(freqs[freqs<80],psd[freqs<80])
+        #     plt.show()
+        
+        #     fres = band_rng[1] - band_rng[0]
+        #     ib = np.logical_and(freqs>=band_rng[0], freqs<band_rng[1])
+        #     bp = simps(psd, dx=fres)
+    
+        p = Pac(idpac=(pac_method, surrogate_method, norm_method), 
+                f_pha=(f_pha[0], f_pha[1], 1, .2), 
+                f_amp=(f_amp[0], f_amp[1], 5, 1),
+                dcomplex='wavelet', width=12, verbose=None)
+        
+        # Now, extract all of the phases and amplitudes
+        phases = p.filter(sample_rate, data, ftype='phase')
+        amplitudes = p.filter(sample_rate, data, ftype='amplitude')
+        xpac = p.fit(phases, amplitudes, n_perm=200, p=0.05, mcp='fdr')
+    
+        
+        # plt.figure(figsize=(16, 12))
+        # for i, k in enumerate(range(4)):
+        #     # change the pac method
+        #     p.idpac = (5, k, 4)
+        #     # compute only the pac without filtering
+        #     xpac = p.fit(phases, amplitudes, n_perm=400, p=0.05, mcp='fdr')
+        #     # plot
+        #     title = p.str_surro.replace(' (', '\n(')
+        #     plt.subplot(2, 2, k + 1)
+        #     p.comodulogram(xpac.mean(-1), title=title, cmap='Reds', vmin=0,
+        #                    fz_labels=18, fz_title=20, fz_cblabel=18)
+        # plt.tight_layout()
+        # plt.show()
+        
+        x = xpac.mean(-1)
+        # sns.heatmap(np.flip(x,0), cmap='Reds')
+        img = sns.heatmap(np.flip(x,0), cmap='Reds', xticklabels=False,yticklabels=False, cbar=False)
+        fig = plt.Axes.get_figure(img)
+        # FINALLY WE SAVE IT AS A JPG -    THIS WILL BE IMPORTANT FOR RESIZING 
+        # THIS IMAGE FOR RESNET-50 USING PIL PACKAGE 
+        fig.savefig(read_dir + 'pac_figures\\' + img_folder + thisFileName + '.jpg', bbox_inches='tight')
 
-    fres = band_rng[1] - band_rng[0]
-    ib = np.logical_and(freqs>=band_rng[0], freqs<band_rng[1])
-    bp = simps(psd, dx=fres)
-
-# ch_types = ["eeg"]*data.shape[1]
-# data = data.reshape(1, len(data))
-# ch_types = ["eeg"]
-# info = mne.create_info(ch_names=['Cz'], sfreq=500,ch_types=ch_types)
-# raw = mne.io.RawArray(data, info)
-
-# win_length = (2/band_rng[0])*sf
-# freqs, psd = welch(data , sf, nperseg=win_length)
-
-
-# define a :class:`tensorpac.Pac` object and use the MVL as the main method
-# for measuring PAC
-p = Pac(idpac=(5, 2, 4), f_pha=(1, 8, 1, .2), f_amp=(12, 50, 5, 1),
-        dcomplex='wavelet', width=12)
-
-# Now, extract all of the phases and amplitudes
-phases = p.filter(sf, data, ftype='phase')
-amplitudes = p.filter(sf, data, ftype='amplitude')
-
-
-plt.figure(figsize=(16, 12))
-for i, k in enumerate(range(4)):
-    # change the pac method
-    p.idpac = (5, k, 4)
-    # compute only the pac without filtering
-    xpac = p.fit(phases, amplitudes, n_perm=400, p=0.05, mcp='fdr')
-    # plot
-    title = p.str_surro.replace(' (', '\n(')
-    plt.subplot(2, 2, k + 1)
-    p.comodulogram(xpac.mean(-1), title=title, cmap='Reds', vmin=0,
-                   fz_labels=18, fz_title=20, fz_cblabel=18)
-
-plt.tight_layout()
-
-plt.show()
-
-import seaborn as sns
-x = xpac.mean(-1)
-# sns.heatmap(np.flip(x,0), cmap='Reds')
-sns.heatmap(np.flip(x,0), cmap='hsv', xticklabels=False,yticklabels=False, cbar=False)
+        # title = p.str_surro.replace(' (', '\n(')
+        # ch = thisFileName.split('_')[0]
+        # vst = thisFileName.split('_')[3]
+        # sbj = thisFileName.split('_')[4]
+        # aud = img_folder.split('\\')[0]
+        # title = ch + ' from ' + sbj + ', visit ' + vst + '\n' + aud
+        # p.comodulogram(xpac.mean(-1), title=title, cmap='Reds', vmin=0, fz_labels=14, fz_title=18, fz_cblabel=14)
+        # # p.savefig(read_dir + 'pac_figures\\' + thisFileName + '.jpg')
+        # del p

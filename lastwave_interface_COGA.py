@@ -687,12 +687,12 @@ if do_reshape_by_subject:
 
 if relocate_images_by_alcoholism:
     pth = 'D:\\COGA_eec\\chan_hz_figures\\'
-    alcpth = 'D:\\COGA_eec\\chan_hz_25_40yo_M\\alcoholic\\'
-    nonpth = 'D:\\COGA_eec\\chan_hz_25_40yo_M\\nonalcoholic\\'
+    alcpth = 'D:\\COGA_eec\\chan_hz_25_40yo_F\\alcoholic\\'
+    nonpth = 'D:\\COGA_eec\\chan_hz_25_40yo_F\\nonalcoholic\\'
     # OPEN PICKLE FILE
     dat = pd.read_pickle(base_dir + 'chan_hz_dat.pkl')
-    alc = dat[(dat.alcoholic==1) & (dat.age_this_visit>=25) & (dat.age_this_visit<=40) & (dat.sex=='M')]
-    nonalc = dat[(dat.alcoholic==0) & (dat.age_this_visit>=25) & (dat.age_this_visit<=40) & (dat.sex=='M')]
+    alc = dat[(dat.alcoholic==1) & (dat.age_this_visit>=25) & (dat.age_this_visit<=40) & (dat.sex=='F')]
+    nonalc = dat[(dat.alcoholic==0) & (dat.age_this_visit>=25) & (dat.age_this_visit<=40) & (dat.sex=='F')]
     
     # alc = dat[dat.alcoholic==1]
     # nonalc = dat[dat.alcoholic==0]
@@ -809,7 +809,7 @@ if do_resnet_chanxfreq:
     from tensorflow.keras.optimizers import Adam
     # import cv2
 
-    pth = 'D:\\COGA_eec\\chan_hz_25_40yo_M\\'
+    pth = 'D:\\COGA_eec\\chan_hz_figures\\'
     
     img_height,img_width=224,224
     batch_size=32
@@ -858,7 +858,7 @@ if do_resnet_chanxfreq:
     plotter_lib.plot(epochs_range, history.history['val_accuracy'], label="Validation Accuracy")
     plotter_lib.axis(ymin=0.4,ymax=1)
     plotter_lib.grid()
-    plotter_lib.title('Model Accuracy - age 25-40, Men, binary crossentropy')
+    plotter_lib.title('Model Accuracy, binary crossentropy')
     plotter_lib.ylabel('Accuracy')
     plotter_lib.xlabel('Epochs')
     plotter_lib.legend(['train', 'validation'])
