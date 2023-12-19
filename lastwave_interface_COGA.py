@@ -48,13 +48,16 @@ do_reshape_by_subject = False       # RESHAPES pacdat SO THAT EACH ROW IS ONE SU
 relocate_images_by_alcoholism = False
 do_deep_learn = False               # USES DATA TABLE AS INPUT TO DEEP LEARNING NETWORK TRAINING AND TESTING
 generate_pac_images = False
-do_resnet_chanxfreq = True
-
+do_resnet_chanxfreq = False
+do_bad_channel_check = True
 
 # PARAMETERS
 base_dir = "E:\\Documents\\COGA_eec\\data\\"
 write_dir = "D:\\COGA_eec\\"
     
+base_dir = "E:\\Documents\\COGA_eec\\data\\"
+
+
 # specific frequency bands
 FREQ_BANDS = {"delta": [0.5, 4],
               "theta": [4, 8],
@@ -865,7 +868,38 @@ if do_resnet_chanxfreq:
     
 
 
+if do_bad_channel_check:
+    
+    read_dir = 'C:\\Users\\crichard\\Documents\\'
+    base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\'
+    
+    d = pd.read_csv(read_dir + 'eeg_eval_12.15.23.dat', header=None)
+    clist = pd.read_csv(read_dir + 'chan_64.txt', delimiter='\t', header=None)
+    hdr = clist.iloc[:,1].tolist()
+    hdr.insert(0,'fname')
+    
+    qflat = pd.DataFrame(columns=hdr, index=np.arange(len(d)/3))
+    qexc = pd.DataFrame(columns=hdr, index=np.arange(len(d)/3))
+    qcount = 0
 
+    for i in range(0, len(d), 3):
+        # GET FILE NAME AND ADD TO DATAFRAMES
+        dd = d.iloc[i:i+3,:]
+        qflat.fname[qcount] = dd.iloc[0,:][0]
+        qexc.fname[qcount] = dd.iloc[0,:][0]
+        # THE NUMBER OF 1 SECOND INTERVALS IN WHICH THE DIFFERENCE BETWEEN THE 
+        # MAXIMUM VALUE AND THE MININUM VALUE WAS LESS THAN 5 MICROVOLTS
+        raw1 = dd.iloc[1,:][0].split(' ')[1:]
+        raw2 = dd.iloc[2,:][0].split(' ')[1:]
+        # THE NUMBER OF INTERVALS IN WHICH THE DIFFERENCE BETWEEN THE MAXIMUM 
+        # VALUE AND THE MININUM VALUE WAS GREATER THAN 100 MICROVOLTS
+        vals1 = pd.DataFrame([int(v) for v in raw1])
+        vals2 = pd.DataFrame([int(v) for v in raw2])
+        # COPY VALUES INTO DATAFRAMES THEN INCREMENT
+        qflat.iloc[qcount,1:len(vals1)] =  vals1.iloc[0,:]
+        qexc.iloc[qcount,1:len(vals2)] =  vals2.iloc[0,:]
+        qcount+=1
     
-    
-    
+    qflat.to_pickle(read_dir  + 'coga_eec_channel_quality_FLAT.pkl')
+    qexc.to_pickle(read_dir  + 'coga_eec_channel_quality_EXCESSIVE.pkl')
+    # dat =  pd.read_pickle(base_dir  + 'chan_hz_dat.pkl')
