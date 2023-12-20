@@ -49,6 +49,7 @@ relocate_images_by_alcoholism = False
 do_deep_learn = False               # USES DATA TABLE AS INPUT TO DEEP LEARNING NETWORK TRAINING AND TESTING
 generate_pac_images = False
 do_resnet_chanxfreq = False
+do_bad_channel_check_table_gen = True
 do_bad_channel_check = True
 
 # PARAMETERS
@@ -868,7 +869,7 @@ if do_resnet_chanxfreq:
     
 
 
-if do_bad_channel_check:
+if do_bad_channel_check_table_gen:
     
     read_dir = 'C:\\Users\\crichard\\Documents\\'
     base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\'
@@ -876,6 +877,7 @@ if do_bad_channel_check:
     d = pd.read_csv(read_dir + 'eeg_eval_12.15.23.dat', header=None)
     clist = pd.read_csv(read_dir + 'chan_64.txt', delimiter='\t', header=None)
     hdr = clist.iloc[:,1].tolist()
+    hdr = [h.strip() for h in hdr]
     hdr.insert(0,'fname')
     
     qflat = pd.DataFrame(columns=hdr, index=np.arange(len(d)/3))
@@ -887,8 +889,8 @@ if do_bad_channel_check:
         dd = d.iloc[i:i+3,:]
         qflat.fname[qcount] = dd.iloc[0,:][0]
         qexc.fname[qcount] = dd.iloc[0,:][0]
-        # THE NUMBER OF 1 SECOND INTERVALS IN WHICH THE DIFFERENCE BETWEEN THE 
-        # MAXIMUM VALUE AND THE MININUM VALUE WAS LESS THAN 5 MICROVOLTS
+        # THE NUMBER OF 1 SECOND INTERVALS (RANGE [0,256]) IN WHICH THE DIFFERENCE BETWEEN THE 
+        # MAXIMUM VALUE AND THE MININUM VALUE WAS LESS THAN 5 MICROVOLTS 
         raw1 = dd.iloc[1,:][0].split(' ')[1:]
         raw2 = dd.iloc[2,:][0].split(' ')[1:]
         # THE NUMBER OF INTERVALS IN WHICH THE DIFFERENCE BETWEEN THE MAXIMUM 
@@ -900,6 +902,47 @@ if do_bad_channel_check:
         qexc.iloc[qcount,1:len(vals2)] =  vals2.iloc[0,:]
         qcount+=1
     
-    qflat.to_pickle(read_dir  + 'coga_eec_channel_quality_FLAT.pkl')
-    qexc.to_pickle(read_dir  + 'coga_eec_channel_quality_EXCESSIVE.pkl')
+    qflat.to_pickle(base_dir  + 'coga_eec_channel_quality_FLAT.pkl')
+    qexc.to_pickle(base_dir  + 'coga_eec_channel_quality_EXCESSIVE.pkl')
     # dat =  pd.read_pickle(base_dir  + 'chan_hz_dat.pkl')
+    
+    
+# THIS BLOCK GENERATES HISTOGRAM OF PERCENT BAD CHANNELS FOR THRESHOLD SELECTION
+if do_bad_channel_check: 
+    # 1. CALCULATE % RETAINED AT ALL POSSIBLE VALUES (0-256) 
+    # 2. FIND 
+    # 3. FIND MATCHING SUBJECT, VISIT, CHANNEL IN PACDAT AND UPDATE
+    # 4. SAVE PACDAT
+
+    base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\'
+    
+    # pacdat.to_csv(base_dir + 'pacdat' + '.csv', index=False)
+    # pacdat = pd.read_csv(base_dir + 'pacdat.csv')
+    flat =  pd.read_pickle(base_dir  + 'coga_eec_channel_quality_FLAT.pkl')
+    exss =  pd.read_pickle(base_dir  + 'coga_eec_channel_quality_EXCESSIVE.pkl')
+    
+    fl = [0]*256 # FLAT CHANNEL METRICS
+    xl = [0]*256 # FLAT CHANNEL METRICS
+    chans = np.array(exss.columns)
+    chans = chans.tolist()
+    chans = [c.strip() for c in chans][1:]
+    
+    # ch = 0
+    for ch in range(0,len(chans)):
+        for i in range(1,255):
+            f_bools = flat[[chans[ch]]]==i
+            fchan = f_bools.replace({True: 1, False: 0})
+            ff = np.array(fchan)
+            fff = [f[0] for f in ff]
+            fl[i] = sum(fff)
+
+            # xchan = exss[[chans[ch]]]==i
+            # xchan = xchan.replace({True: 1, False: 0})
+            # xl[i] = sum(xchan.values.T.tolist()[0])
+        
+        plt.figure()
+        plt.plot(fl)
+        # plt.plot(xl)
+        plt.title(chans[ch])
+        plt.show()
+        plt.clf()
