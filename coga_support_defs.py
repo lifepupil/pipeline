@@ -78,44 +78,6 @@ def plot_eeg_mwt(freqlist, mwt_path, mwt_file, eeg_path, eeg_file):
     ax[1].set_ylabel('Frequency (Hz)')
     ax[1].set_xlabel('Time (minutes)')
     
-def do_pac(data):
-    # 1. NEED TO HAVE COLLECTED ALL FILENAMES OF RECORDINGS FROM SAME EEG CHANNEL
-    #       BEST TO MAKE SMALL HELPER FUNCTION TO SPLIT FILENAMES TO GET CHANNEL INFO
-    # 2. EACH OF THESE FILES NEEDS TO BE OPENED AND PUT INTO AN ARRAY
-    # 3. 
-    
-    sf = 500
-    
-    import matplotlib.pyplot as plt
-    from tensorpac import Pac, EventRelatedPac, PreferredPhase
-    from tensorpac.utils import PeakLockedTF, PSD, ITC, BinAmplitude
-    from tensorpac.signals import pac_signals_wavelet
-    
-    # define a :class:`tensorpac.Pac` object and use the MVL as the main method
-    # for measuring PAC
-    p = Pac(idpac=(1, 0, 0), f_pha=(3, 10, 1, .2), f_amp=(50, 90, 5, 1),
-            dcomplex='wavelet', width=12)
-
-    # Now, extract all of the phases and amplitudes
-    phases = p.filter(sf, data, ftype='phase')
-    amplitudes = p.filter(sf, data, ftype='amplitude')
-
-
-    plt.figure(figsize=(16, 12))
-    for i, k in enumerate(range(4)):
-        # change the pac method
-        p.idpac = (5, k, 1)
-        # compute only the pac without filtering
-        xpac = p.fit(phases, amplitudes, n_perm=20)
-        # plot
-        title = p.str_surro.replace(' (', '\n(')
-        plt.subplot(2, 2, k + 1)
-        p.comodulogram(xpac.mean(-1), title=title, cmap='Reds', vmin=0,
-                       fz_labels=18, fz_title=20, fz_cblabel=18)
-
-    plt.tight_layout()
-    plt.show()
-    
 def get_sub_from_fname(whichSub, whichIndx):
     return whichSub.split('_')[whichIndx]
 

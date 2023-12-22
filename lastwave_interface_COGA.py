@@ -49,7 +49,8 @@ relocate_images_by_alcoholism = False
 do_deep_learn = False               # USES DATA TABLE AS INPUT TO DEEP LEARNING NETWORK TRAINING AND TESTING
 generate_pac_images = False
 do_resnet_chanxfreq = False
-do_bad_channel_check_table_gen = True
+do_bad_channel_check_table_gen = False
+do_bad_channel_figure_gen = False
 do_bad_channel_check = True
 
 # PARAMETERS
@@ -873,33 +874,90 @@ if do_bad_channel_check_table_gen:
     
     read_dir = 'C:\\Users\\crichard\\Documents\\'
     base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\'
+    demog_hdr = ['ID','this_visit','fname','chan_num']
+    
+    visit_letters = list(string.ascii_lowercase)
+    visit_pos = 2
     
     d = pd.read_csv(read_dir + 'eeg_eval_12.15.23.dat', header=None)
     clist = pd.read_csv(read_dir + 'chan_64.txt', delimiter='\t', header=None)
     hdr = clist.iloc[:,1].tolist()
     hdr = [h.strip() for h in hdr]
-    hdr.insert(0,'fname')
+
+    hdr32 = hdr[0:31]
+    hdr32.append('eye')
+    hdr32 = demog_hdr + hdr32
+
+    hdr64 = hdr.copy() 
+    hdr64.extend(['eye','unknown1','unknown2'])
+    hdr64 = demog_hdr + hdr64
     
+    hdr = demog_hdr + hdr
+
+
     qflat = pd.DataFrame(columns=hdr, index=np.arange(len(d)/3))
     qexc = pd.DataFrame(columns=hdr, index=np.arange(len(d)/3))
     qcount = 0
 
     for i in range(0, len(d), 3):
-        # GET FILE NAME AND ADD TO DATAFRAMES
+        # GET THREE ROW SUBSET AND EXTRACT FILE NAME
         dd = d.iloc[i:i+3,:]
-        qflat.fname[qcount] = dd.iloc[0,:][0]
-        qexc.fname[qcount] = dd.iloc[0,:][0]
+        fn = dd.iloc[0,:][0]
+        # info = fn.split('_')
+        # info2 = info[-1].split('.')
+        # info.pop(-1)
+        # info = info + info2
+        thisVisitCode = csd.get_sub_from_fname(fn, visit_pos)[0].lower()
+        try:
+            thisVisit = [visit_letters.index(thisVisitCode)][0] + 1
+        except Exception as e:
+            with open(base_dir + 'errors_from_eeg_quality_check.txt', 'a') as ff:
+                ff.write('FILENAME ' + fn + ' ' + str(e) + '\n')
+            continue
+            
+        thisID = csd.get_sub_from_fname(fn, 3).split('.')[0]
+        
         # THE NUMBER OF 1 SECOND INTERVALS (RANGE [0,256]) IN WHICH THE DIFFERENCE BETWEEN THE 
         # MAXIMUM VALUE AND THE MININUM VALUE WAS LESS THAN 5 MICROVOLTS 
         raw1 = dd.iloc[1,:][0].split(' ')[1:]
-        raw2 = dd.iloc[2,:][0].split(' ')[1:]
+        thisrow =  [int(v) for v in raw1] 
+
+        if len(thisrow)==64:
+            # In the 32 channel set, chan 32 is the eye channel; in the 64 channel set the eye channel is 62.
+            thisrow = [(thisID), thisVisit, fn, 64] + thisrow
+            vals1 = pd.DataFrame([thisrow],columns=hdr64)
+            vals1.drop(['eye','unknown1','unknown2'],axis=1, inplace=True)
+        elif len(thisrow)==32:
+            thisrow.pop(31)
+            thisrow = [(thisID), thisVisit, fn, 32] + thisrow
+            thisrow =  thisrow + [np.nan]*(len(qflat.columns)-len(thisrow))
+            vals1 = pd.DataFrame([thisrow],columns=hdr)
+        else:
+            print('PROBLEM WITH ' + fn)
+            
+        # COPY VALUES INTO DATAFRAMES THEN INCREMENT
+        qflat.iloc[qcount,:] = vals1.iloc[0,:]    
+        
         # THE NUMBER OF INTERVALS IN WHICH THE DIFFERENCE BETWEEN THE MAXIMUM 
         # VALUE AND THE MININUM VALUE WAS GREATER THAN 100 MICROVOLTS
-        vals1 = pd.DataFrame([int(v) for v in raw1])
-        vals2 = pd.DataFrame([int(v) for v in raw2])
+        raw2 = dd.iloc[2,:][0].split(' ')[1:]
+        thisrow =  [int(v) for v in raw2] 
+
+        if len(thisrow)==64:
+            # In the 32 channel set, chan 32 is the eye channel; in the 64 channel set the eye channel is 62. -Dave Chorlian
+            thisrow = [(thisID), thisVisit, fn, 64] + thisrow
+            vals2 = pd.DataFrame([thisrow],columns=hdr64)
+            vals2.drop(['eye','unknown1','unknown2'],axis=1, inplace=True)
+        elif len(thisrow)==32:
+            thisrow.pop(31)
+            thisrow = [(thisID), thisVisit, fn, 32] + thisrow
+            thisrow =  thisrow + [np.nan]*(len(qexc.columns)-len(thisrow))
+            vals2 = pd.DataFrame([thisrow],columns=hdr)
+        else:
+            print('PROBLEM WITH ' + fn)
+        
         # COPY VALUES INTO DATAFRAMES THEN INCREMENT
-        qflat.iloc[qcount,1:len(vals1)] =  vals1.iloc[0,:]
-        qexc.iloc[qcount,1:len(vals2)] =  vals2.iloc[0,:]
+        qexc.iloc[qcount,:] =  vals2.iloc[0,:]
         qcount+=1
     
     qflat.to_pickle(base_dir  + 'coga_eec_channel_quality_FLAT.pkl')
@@ -908,12 +966,13 @@ if do_bad_channel_check_table_gen:
     
     
 # THIS BLOCK GENERATES HISTOGRAM OF PERCENT BAD CHANNELS FOR THRESHOLD SELECTION
-if do_bad_channel_check: 
+if do_bad_channel_figure_gen: 
     # 1. CALCULATE % RETAINED AT ALL POSSIBLE VALUES (0-256) 
     # 2. FIND 
     # 3. FIND MATCHING SUBJECT, VISIT, CHANNEL IN PACDAT AND UPDATE
     # 4. SAVE PACDAT
 
+    plot_figs = False
     base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\'
     
     # pacdat.to_csv(base_dir + 'pacdat' + '.csv', index=False)
@@ -921,28 +980,87 @@ if do_bad_channel_check:
     flat =  pd.read_pickle(base_dir  + 'coga_eec_channel_quality_FLAT.pkl')
     exss =  pd.read_pickle(base_dir  + 'coga_eec_channel_quality_EXCESSIVE.pkl')
     
-    fl = [0]*256 # FLAT CHANNEL METRICS
-    xl = [0]*256 # FLAT CHANNEL METRICS
+    flat_metrics = [0]*256 # FLAT CHANNEL METRICS
+    # THE NUMBER OF 1 SECOND INTERVALS (RANGE [0,256]) IN WHICH THE DIFFERENCE BETWEEN THE 
+    # MAXIMUM VALUE AND THE MININUM VALUE WAS LESS THAN 5 MICROVOLTS
+    exss_metrics = [0]*256 # EXCESSIVE NOISE CHANNEL METRICS
+    # THE NUMBER OF INTERVALS IN WHICH THE DIFFERENCE BETWEEN THE MAXIMUM 
+    # VALUE AND THE MININUM VALUE WAS GREATER THAN 100 MICROVOLTS
+    
     chans = np.array(exss.columns)
     chans = chans.tolist()
     chans = [c.strip() for c in chans][1:]
     
     # ch = 0
     for ch in range(0,len(chans)):
-        for i in range(1,255):
-            f_bools = flat[[chans[ch]]]==i
-            fchan = f_bools.replace({True: 1, False: 0})
-            ff = np.array(fchan)
-            fff = [f[0] for f in ff]
-            fl[i] = sum(fff)
+        for i in range(0,255):
+            f_bools = flat[[chans[ch]]]<=i
+            f_nums = f_bools.replace({True: 1, False: 0})
+            fchan = np.array(f_nums)
+            fcf = [f[0] for f in fchan]
+            flat_metrics[i] = sum(fcf)
 
-            # xchan = exss[[chans[ch]]]==i
-            # xchan = xchan.replace({True: 1, False: 0})
-            # xl[i] = sum(xchan.values.T.tolist()[0])
+            x_bools = exss[[chans[ch]]]<=i
+            x_nums = x_bools.replace({True: 1, False: 0})
+            xchan = np.array(x_nums)
+            xcf = [x[0] for x in xchan]
+            exss_metrics[i] = sum(xcf)
+
+        if plot_figs:
+            plt.figure()
+            # plt.yscale("log")   
+            plt.plot(flat_metrics, label='flat intervals (delta < 5uV)')
+            plt.plot(exss_metrics, label='noisy intervals (delta > 100uV)')
+            plt.title('EEG recording quality metrics, channel ' + chans[ch])
+            plt.xlabel('# of bad 1 second intervals')
+            plt.ylabel('# of EEG recordings (cumulative)')
+            plt.legend(loc="lower right")
+            plt.show()
+            plt.clf()
+            
+if do_bad_channel_check: 
+    flat_cutoff = 50 
+    noise_cutoff = 50 
+    
+    base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\'
+    
+    pacdat = pd.read_csv(base_dir + 'pacdat.csv')
+    
+    pacdat[['bad_flat','bad_noisy']] = np.nan
+    bf = pacdat.pop('bad_flat')
+    pacdat.insert(2,'bad_flat',bf)
+    bn = pacdat.pop('bad_noisy')
+    pacdat.insert(3,'bad_noisy',bn)
+    
+    flat =  pd.read_pickle(base_dir  + 'coga_eec_channel_quality_FLAT.pkl')
+    exss =  pd.read_pickle(base_dir  + 'coga_eec_channel_quality_EXCESSIVE.pkl')
+    
+    exclude_chs = ['X','Y','BLANK']
+    
+    for i in range(0,len(pacdat)):
+        thisid = str(pacdat.ID[i])
+        thisvisit = pacdat.this_visit[i]
+        this_ch = pacdat.channel[i]
+        if any([c==this_ch for c in exclude_chs]):
+            continue
         
-        plt.figure()
-        plt.plot(fl)
-        # plt.plot(xl)
-        plt.title(chans[ch])
-        plt.show()
-        plt.clf()
+        
+        this_subj_vis = flat[(flat.ID==thisid) & (flat.this_visit==thisvisit)]
+        flat_score = this_subj_vis[[this_ch]].iloc[0,0]
+        if flat_score>flat_cutoff:
+            pacdat.loc[i,('bad_flat')] = 1
+        else:
+            pacdat.loc[i,('bad_flat')] = 0
+
+        this_subj_vis = exss[(exss.ID==thisid) & (exss.this_visit==thisvisit)]
+        noise_score = this_subj_vis[[this_ch]].iloc[0,0]
+        if noise_score>noise_cutoff:
+            pacdat.loc[i,('bad_noisy')] = 1
+        else:
+            pacdat.loc[i,('bad_noisy')] = 0
+    
+    
+    pacdat.to_csv(base_dir + 'pacdat2' + '.csv', index=False)
+
+    
+    
