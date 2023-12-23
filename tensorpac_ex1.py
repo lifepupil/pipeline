@@ -139,7 +139,7 @@ for c in range(0,len(chanList_10_20)):
         # FINALLY WE SAVE IT AS A JPG -    THIS WILL BE IMPORTANT FOR RESIZING 
         # THIS IMAGE FOR RESNET-50 USING PIL PACKAGE 
         fig.savefig(read_dir + 'pac_figures\\' + img_folder + thisFileName + '.jpg', bbox_inches='tight')
-
+        fig.close()
         # title = p.str_surro.replace(' (', '\n(')
         # ch = thisFileName.split('_')[0]
         # vst = thisFileName.split('_')[3]

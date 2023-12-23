@@ -51,6 +51,7 @@ generate_pac_images = False
 do_resnet_chanxfreq = False
 do_bad_channel_check_table_gen = False
 do_bad_channel_figure_gen = False
+do_bad_channel_pacdat_update = False
 do_bad_channel_check = True
 
 # PARAMETERS
@@ -59,7 +60,6 @@ write_dir = "D:\\COGA_eec\\"
     
 base_dir = "E:\\Documents\\COGA_eec\\data\\"
 
-
 # specific frequency bands
 FREQ_BANDS = {"delta": [0.5, 4],
               "theta": [4, 8],
@@ -67,6 +67,7 @@ FREQ_BANDS = {"delta": [0.5, 4],
               "low_beta": [12, 20],
               "high_beta": [20, 30],
               'low_gamma': [30, 50]}
+
 
 # PARAMETERS FOR make_data_table PHASE AMPLITUDE COUPLING USING TENSORPAC
 if make_data_table:
@@ -876,7 +877,6 @@ if do_bad_channel_check_table_gen:
     base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\'
     demog_hdr = ['ID','this_visit','fname','chan_num']
     
-    visit_letters = list(string.ascii_lowercase)
     visit_pos = 2
     
     d = pd.read_csv(read_dir + 'eeg_eval_12.15.23.dat', header=None)
@@ -972,7 +972,8 @@ if do_bad_channel_figure_gen:
     # 3. FIND MATCHING SUBJECT, VISIT, CHANNEL IN PACDAT AND UPDATE
     # 4. SAVE PACDAT
 
-    plot_figs = False
+    plot_figs = True
+    figtype = 'cumulative' # cumulative histogram
     base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\'
     
     # pacdat.to_csv(base_dir + 'pacdat' + '.csv', index=False)
@@ -989,78 +990,188 @@ if do_bad_channel_figure_gen:
     
     chans = np.array(exss.columns)
     chans = chans.tolist()
-    chans = [c.strip() for c in chans][1:]
+    chans = [c.strip() for c in chans][4:]
     
-    # ch = 0
-    for ch in range(0,len(chans)):
-        for i in range(0,255):
-            f_bools = flat[[chans[ch]]]<=i
-            f_nums = f_bools.replace({True: 1, False: 0})
-            fchan = np.array(f_nums)
-            fcf = [f[0] for f in fchan]
-            flat_metrics[i] = sum(fcf)
+    figlbl = figtype[0].upper()+figtype[1:]    
+    if figtype=='histogram':
+        figlbl2 = 'Counts'
+        legloc = "upper center"
+    else:
+        figlbl2 = 'Cumulative'
+        legloc = "lower center"
 
-            x_bools = exss[[chans[ch]]]<=i
-            x_nums = x_bools.replace({True: 1, False: 0})
-            xchan = np.array(x_nums)
-            xcf = [x[0] for x in xchan]
-            exss_metrics[i] = sum(xcf)
-
-        if plot_figs:
-            plt.figure()
-            # plt.yscale("log")   
-            plt.plot(flat_metrics, label='flat intervals (delta < 5uV)')
-            plt.plot(exss_metrics, label='noisy intervals (delta > 100uV)')
-            plt.title('EEG recording quality metrics, channel ' + chans[ch])
-            plt.xlabel('# of bad 1 second intervals')
-            plt.ylabel('# of EEG recordings (cumulative)')
-            plt.legend(loc="lower right")
-            plt.show()
-            plt.clf()
-            
-if do_bad_channel_check: 
+    if figtype=='histogram':
+        for ch in range(0,len(chans)):
+            for i in range(0,256):
+                f_bools = flat[[chans[ch]]]==i
+                f_nums = f_bools.replace({True: 1, False: 0})
+                fchan = np.array(f_nums)
+                fcf = [f[0] for f in fchan]
+                flat_metrics[i] = sum(fcf)
+                x_bools = exss[[chans[ch]]]==i
+                x_nums = x_bools.replace({True: 1, False: 0})
+                xchan = np.array(x_nums)
+                xcf = [x[0] for x in xchan]
+                exss_metrics[i] = sum(xcf)
+            if plot_figs:
+                figFN = figtype + '_flat_noisy_metrics_' + chans[ch] + '.jpg'
+                plt.figure()
+                plt.yscale("log")   
+                plt.plot(flat_metrics, label='flat intervals (delta < 5uV)')
+                plt.plot(exss_metrics, label='noisy intervals (delta > 100uV)')
+                plt.title('EEG recording quality metrics ' + figlbl + ', channel ' + chans[ch])
+                plt.xlabel('# of bad 1 second intervals')
+                plt.ylabel('# of EEG recordings (' + figlbl2 + ')')
+                plt.legend(loc=legloc)
+                # plt.show()
+                # plt.clf()
+                print('Saving file ' + figFN)
+                plt.savefig(base_dir + 'eeg_quality_figures\\' + figFN)
+                plt.close()
+    if figtype=='cumulative':
+        for ch in range(0,len(chans)):
+            for i in range(0,256):
+                f_bools = flat[[chans[ch]]]<=i
+                f_nums = f_bools.replace({True: 1, False: 0})
+                fchan = np.array(f_nums)
+                fcf = [f[0] for f in fchan]
+                flat_metrics[i] = sum(fcf)
+    
+                x_bools = exss[[chans[ch]]]<=i
+                x_nums = x_bools.replace({True: 1, False: 0})
+                xchan = np.array(x_nums)
+                xcf = [x[0] for x in xchan]
+                exss_metrics[i] = sum(xcf)
+    
+            if plot_figs:
+                figFN = figtype + '_flat_noisy_metrics_' + chans[ch] + '.jpg'
+                plt.figure()
+                # plt.yscale("log")   
+                plt.plot(flat_metrics, label='flat intervals (delta < 5uV)')
+                plt.plot(exss_metrics, label='noisy intervals (delta > 100uV)')
+                plt.title('EEG recording quality metrics ' + figlbl + ', channel ' + chans[ch])
+                plt.xlabel('# of bad 1 second intervals')
+                plt.ylabel('# of EEG recordings (' + figlbl2 + ')')
+                plt.legend(loc=legloc)
+                # plt.show()
+                # plt.clf()
+                print('Saving file ' + figFN)
+                plt.savefig(base_dir + 'eeg_quality_figures\\' + figFN)
+                plt.close()
+     
+if do_bad_channel_pacdat_update: 
     flat_cutoff = 50 
     noise_cutoff = 50 
-    
+    startrow = 0 # SET TO 0 UNLESS PICKING UP WHERE LEFT OFF IN pacdat UPDATING
+
     base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\'
     
-    pacdat = pd.read_csv(base_dir + 'pacdat.csv')
-    
-    pacdat[['bad_flat','bad_noisy']] = np.nan
+    # pacdat = pd.read_csv(base_dir + 'pacdat2.csv')
+    pacdat = pd.read_pickle(base_dir + 'pacdat2.pkl')
+    # pacdat[['bad_flat','bad_noisy']] = np.nan
     bf = pacdat.pop('bad_flat')
-    pacdat.insert(2,'bad_flat',bf)
+    bf = pd.DataFrame(bf,columns=['bad_flat'])
     bn = pacdat.pop('bad_noisy')
-    pacdat.insert(3,'bad_noisy',bn)
+    bn = pd.DataFrame(bn,columns=['bad_noisy'])
     
     flat =  pd.read_pickle(base_dir  + 'coga_eec_channel_quality_FLAT.pkl')
     exss =  pd.read_pickle(base_dir  + 'coga_eec_channel_quality_EXCESSIVE.pkl')
     
-    exclude_chs = ['X','Y','BLANK']
+    exclude_chs = ['X','Y','BLANK','Horizonta','Vertical','HEOG','VEOG']
     
-    for i in range(0,len(pacdat)):
+    for i in range(startrow,len(pacdat)):
         thisid = str(pacdat.ID[i])
         thisvisit = pacdat.this_visit[i]
         this_ch = pacdat.channel[i]
+        # WE DON'T CARE ABOUT NON-EEG CHANNELS
         if any([c==this_ch for c in exclude_chs]):
             continue
         
-        
+        # LOOKUP FOR FLAT CHANNEL METRICS
         this_subj_vis = flat[(flat.ID==thisid) & (flat.this_visit==thisvisit)]
+        # WE ONLY NEED TO DO THIS CHECK FOR EMPTY DATAFRAME ONCE BECAUSE IF 
+        # IT'S EMPTY FOR flat THEN IT WILL BE EMPTY FOR exss
+        if this_subj_vis.empty:
+            print('Subject ' + thisid + ' visit ' + str(thisvisit) + '' +' not found (i =  ' + str(i) + ')')
+            continue
         flat_score = this_subj_vis[[this_ch]].iloc[0,0]
+        
+            
         if flat_score>flat_cutoff:
-            pacdat.loc[i,('bad_flat')] = 1
+            bf.loc[i,('bad_flat')] = 1
+            # pacdat.loc[i,('bad_flat')] = 1
         else:
-            pacdat.loc[i,('bad_flat')] = 0
-
+            bf.loc[i,('bad_flat')] = 0
+            
+        # LOOKUP FOR NOISY CHANNEL METRICS
         this_subj_vis = exss[(exss.ID==thisid) & (exss.this_visit==thisvisit)]
         noise_score = this_subj_vis[[this_ch]].iloc[0,0]
         if noise_score>noise_cutoff:
-            pacdat.loc[i,('bad_noisy')] = 1
+            bn.loc[i,('bad_noisy')] = 1
+            # pacdat.loc[i,('bad_noisy')] = 1
         else:
-            pacdat.loc[i,('bad_noisy')] = 0
+            bn.loc[i,('bad_noisy')] = 0
     
     
-    pacdat.to_csv(base_dir + 'pacdat2' + '.csv', index=False)
+    pacdat.insert(2,'bad_flat',bf)
+    pacdat.insert(3,'bad_noisy',bn)
+    # pacdat.to_pickle(base_dir + 'pacdat2.pkl')
 
+    flatfn = 'pacdat2_cutoffs_flat_' + str(flat_cutoff ) + '_excessnoise_' + str(noise_cutoff) + ''    
+    # pacdat.to_csv(base_dir + flatfn + '.csv', index=False)
+    pacdat.to_pickle(base_dir + flatfn + '.pkl')
     
+if do_bad_channel_check:
+    whichEEGfileExtention = 'png'
+    base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\'
+    read_dir = 'D:\\COGA\\eeg_figures\\'
     
+    badf_target_path = 'D:\\COGA\\eeg_figures_flat\\'
+    badn_target_path = 'D:\\COGA\\eeg_figures_noise\\'
+    
+    chan_i = 0 
+    visit_i = 3 
+    id_i = 4 
+    
+    figList = csd.get_file_list(read_dir, whichEEGfileExtention)
+    fig_info = pd.DataFrame(figList, columns=['dir','fn'])
+    
+    c = [f.split('_')[chan_i] for f in  fig_info.fn]
+    c = pd.DataFrame(c,columns=['channels'])
+    fig_info.insert(0,'channels',c)
+
+    visitCodeList = [f.split('_')[visit_i][0] for f in  fig_info.fn]
+    visitCodeList = [csd.convert_visit_code(v) for v in visitCodeList]    
+    v = pd.DataFrame(visitCodeList,columns=['this_visit'])
+    fig_info.insert(0,'this_visit',v)
+    
+    v = [f.split('_')[id_i] for f in  fig_info.fn]
+    v = pd.DataFrame(v,columns=['ID'])
+    fig_info.insert(0,'ID',v)    
+    
+    del c, v, visitCodeList
+    
+    pacdat = pd.read_pickle(base_dir + 'pacdat_cutoffs_flat_50_excessnoise_50.pkl')
+    badf = pacdat[pacdat.bad_flat==1]    
+    for i in range(0,len(badf)):
+        thisid = str(badf.iloc[i,0])
+        thisvisit = badf.iloc[i,10]
+        this_ch = badf.iloc[i,8]
+        this_subj_vis = fig_info[(fig_info.ID==thisid) & (fig_info.this_visit==thisvisit) & (fig_info.channels==this_ch)]
+        if not this_subj_vis.empty:
+            pth = this_subj_vis.dir.values[0]
+            fn = this_subj_vis.fn.values[0]
+            bad_source_path_fn = pth + fn
+            os.rename(bad_source_path_fn, badf_target_path + fn)
+
+    badf = pacdat[pacdat.bad_noisy==1]
+    for i in range(0,len(badf)):
+        thisid = str(badf.iloc[i,0])
+        thisvisit = badf.iloc[i,10]
+        this_ch = badf.iloc[i,8]
+        this_subj_vis = fig_info[(fig_info.ID==thisid) & (fig_info.this_visit==thisvisit) & (fig_info.channels==this_ch)]
+        if not this_subj_vis.empty:
+            pth = this_subj_vis.dir.values[0]
+            fn = this_subj_vis.fn.values[0]
+            bad_source_path_fn = pth + fn
+            os.rename(bad_source_path_fn, badn_target_path + fn)

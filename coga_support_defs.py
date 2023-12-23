@@ -295,3 +295,10 @@ def get_band_psds(f, sfreq, FREQ_BANDS):
     # freqBand_i = np.logical_and(freqs>=band_rng[0], freqs<band_rng[1])
     # band_power = simps(psd[freqBand_i], dx=freq_resolution)
     # bp_relative = band_power/simps(psd, dx=freq_resolution)
+    
+def convert_visit_code(vc):
+    import string
+    
+    visit_letters = list(string.ascii_lowercase)
+    thisVisit = [visit_letters.index(vc)][0] + 1
+    return thisVisit
