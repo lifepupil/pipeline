@@ -1066,13 +1066,17 @@ if do_bad_channel_pacdat_update:
 
     base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\'
     
-    # pacdat = pd.read_csv(base_dir + 'pacdat2.csv')
-    pacdat = pd.read_pickle(base_dir + 'pacdat2.pkl')
-    # pacdat[['bad_flat','bad_noisy']] = np.nan
+    pacdat = pd.read_csv(base_dir + 'pacdat.csv')
+    # pacdat = pd.read_pickle(base_dir + 'pacdat.pkl')
+    pacdat[['bad_flat','bad_noisy','flat_score','noise_score']] = np.nan
     bf = pacdat.pop('bad_flat')
     bf = pd.DataFrame(bf,columns=['bad_flat'])
     bn = pacdat.pop('bad_noisy')
     bn = pd.DataFrame(bn,columns=['bad_noisy'])
+    fs = pacdat.pop('flat_score')
+    fs = pd.DataFrame(fs,columns=['flat_score'])
+    ns = pacdat.pop('noise_score')
+    ns = pd.DataFrame(ns,columns=['noise_score'])
     
     flat =  pd.read_pickle(base_dir  + 'coga_eec_channel_quality_FLAT.pkl')
     exss =  pd.read_pickle(base_dir  + 'coga_eec_channel_quality_EXCESSIVE.pkl')
@@ -1102,7 +1106,8 @@ if do_bad_channel_pacdat_update:
             # pacdat.loc[i,('bad_flat')] = 1
         else:
             bf.loc[i,('bad_flat')] = 0
-            
+        fs.loc[i,('flat_score')] = flat_score
+
         # LOOKUP FOR NOISY CHANNEL METRICS
         this_subj_vis = exss[(exss.ID==thisid) & (exss.this_visit==thisvisit)]
         noise_score = this_subj_vis[[this_ch]].iloc[0,0]
@@ -1111,10 +1116,13 @@ if do_bad_channel_pacdat_update:
             # pacdat.loc[i,('bad_noisy')] = 1
         else:
             bn.loc[i,('bad_noisy')] = 0
-    
+        ns.loc[i,('noise_score')] = noise_score
+
     
     pacdat.insert(2,'bad_flat',bf)
-    pacdat.insert(3,'bad_noisy',bn)
+    pacdat.insert(3,'flat_score',fs)
+    pacdat.insert(4,'bad_noisy',bn)
+    pacdat.insert(5,'noise_score',ns)
     # pacdat.to_pickle(base_dir + 'pacdat2.pkl')
 
     flatfn = 'pacdat2_cutoffs_flat_' + str(flat_cutoff ) + '_excessnoise_' + str(noise_cutoff) + ''    
@@ -1124,7 +1132,7 @@ if do_bad_channel_pacdat_update:
 if do_bad_channel_check:
     whichEEGfileExtention = 'png'
     base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\'
-    read_dir = 'D:\\COGA\\eeg_figures\\'
+    read_dir = 'D:\\COGA\\eeg_figures_pacdat\\'
     
     pacdat_target_path = 'D:\\COGA\\eeg_figures_pacdat\\'
     badf_target_path = 'D:\\COGA\\eeg_figures_flat\\'
@@ -1153,37 +1161,37 @@ if do_bad_channel_check:
     del c, v, visitCodeList
     
     pacdat = pd.read_pickle(base_dir + 'pacdat_cutoffs_flat_50_excessnoise_50.pkl')
-    for i in range(0,len(pacdat)):
-        thisid = str(pacdat.iloc[i,0])
-        thisvisit = pacdat.iloc[i,10]
-        this_ch = pacdat.iloc[i,8]
+    # for i in range(0,len(pacdat)):
+    #     thisid = str(pacdat.iloc[i,0])
+    #     thisvisit = pacdat.iloc[i,10]
+    #     this_ch = pacdat.iloc[i,8]
+    #     this_subj_vis = fig_info[(fig_info.ID==thisid) & (fig_info.this_visit==thisvisit) & (fig_info.channels==this_ch)]
+    #     if not this_subj_vis.empty:
+    #         pth = this_subj_vis.dir.values[0]
+    #         fn = this_subj_vis.fn.values[0]
+    #         source_path_fn = pth + fn
+    #         os.rename(source_path_fn, pacdat_target_path + fn)
+    
+    badf = pacdat[pacdat.bad_flat==1]    
+    for i in range(0,len(badf)):
+        thisid = str(badf.iloc[i,0])
+        thisvisit = badf.iloc[i,10]
+        this_ch = badf.iloc[i,8]
         this_subj_vis = fig_info[(fig_info.ID==thisid) & (fig_info.this_visit==thisvisit) & (fig_info.channels==this_ch)]
         if not this_subj_vis.empty:
             pth = this_subj_vis.dir.values[0]
             fn = this_subj_vis.fn.values[0]
-            source_path_fn = pth + fn
-            os.rename(source_path_fn, pacdat_target_path + fn)
-    
-    # badf = pacdat[pacdat.bad_flat==1]    
-    # for i in range(0,len(badf)):
-    #     thisid = str(badf.iloc[i,0])
-    #     thisvisit = badf.iloc[i,10]
-    #     this_ch = badf.iloc[i,8]
-    #     this_subj_vis = fig_info[(fig_info.ID==thisid) & (fig_info.this_visit==thisvisit) & (fig_info.channels==this_ch)]
-    #     if not this_subj_vis.empty:
-    #         pth = this_subj_vis.dir.values[0]
-    #         fn = this_subj_vis.fn.values[0]
-    #         bad_source_path_fn = pth + fn
-    #         os.rename(bad_source_path_fn, badf_target_path + fn)
+            bad_source_path_fn = pth + fn
+            os.rename(bad_source_path_fn, badf_target_path + fn)
 
-    # badf = pacdat[pacdat.bad_noisy==1]
-    # for i in range(0,len(badf)):
-    #     thisid = str(badf.iloc[i,0])
-    #     thisvisit = badf.iloc[i,10]
-    #     this_ch = badf.iloc[i,8]
-    #     this_subj_vis = fig_info[(fig_info.ID==thisid) & (fig_info.this_visit==thisvisit) & (fig_info.channels==this_ch)]
-    #     if not this_subj_vis.empty:
-    #         pth = this_subj_vis.dir.values[0]
-    #         fn = this_subj_vis.fn.values[0]
-    #         bad_source_path_fn = pth + fn
-    #         os.rename(bad_source_path_fn, badn_target_path + fn)
+    badf = pacdat[pacdat.bad_noisy==1]
+    for i in range(0,len(badf)):
+        thisid = str(badf.iloc[i,0])
+        thisvisit = badf.iloc[i,10]
+        this_ch = badf.iloc[i,8]
+        this_subj_vis = fig_info[(fig_info.ID==thisid) & (fig_info.this_visit==thisvisit) & (fig_info.channels==this_ch)]
+        if not this_subj_vis.empty:
+            pth = this_subj_vis.dir.values[0]
+            fn = this_subj_vis.fn.values[0]
+            bad_source_path_fn = pth + fn
+            os.rename(bad_source_path_fn, badn_target_path + fn)
