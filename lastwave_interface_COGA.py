@@ -49,10 +49,10 @@ relocate_images_by_alcoholism = False
 do_deep_learn = False               # USES DATA TABLE AS INPUT TO DEEP LEARNING NETWORK TRAINING AND TESTING
 generate_pac_images = False
 do_resnet_chanxfreq = False
-do_bad_channel_check_table_gen = False
+do_bad_channel_check_table_gen = True
 do_bad_channel_figure_gen = False
 do_bad_channel_pacdat_update = False
-do_bad_channel_check = True
+do_bad_channel_check = False
 
 # PARAMETERS
 base_dir = "E:\\Documents\\COGA_eec\\data\\"
@@ -870,14 +870,24 @@ if do_resnet_chanxfreq:
     plotter_lib.legend(['train', 'validation'])
     
 
-
 if do_bad_channel_check_table_gen:
+# THIS READS AND PROCESSES THE FLAT CHANNEL AND EXCESSIVE NOISE CHANNEL METICS
+# OUTPUTS OF THIS BLOCK ARE LOOKUP TABLES FOR DOWNSTREAM PROCESSING WITH
+# SUBJECT ID AND VISIT COLUMNS, ALL BY CHANNEL METRIC, SAVES THEM AS PICKLE FILES
+    
+    # ~~~~~~~~~~~~ FLAT CHANNEL METRICS ~~~~~~~~~~~~~~~~
+    # THE NUMBER OF 1 SECOND INTERVALS (RANGE [0,256]) IN WHICH THE DIFFERENCE BETWEEN THE 
+    # MAXIMUM VALUE AND THE MININUM VALUE WAS LESS THAN 5 MICROVOLTS
+    
+    # ~~~~~~~~~~~~ EXCESSIVE NOISE CHANNEL METRICS ~~~~~~~~~~~~~~~~
+    # THE NUMBER OF INTERVALS IN WHICH THE DIFFERENCE BETWEEN THE MAXIMUM 
+    # VALUE AND THE MININUM VALUE WAS GREATER THAN 100 MICROVOLTS
     
     read_dir = 'C:\\Users\\crichard\\Documents\\'
     base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\'
     demog_hdr = ['ID','this_visit','fname','chan_num']
     
-    visit_pos = 2
+    visit_pos = 2 # FOR USE IN DOWNSTREAM SPLIT OPERATION
     
     d = pd.read_csv(read_dir + 'eeg_eval_12.15.23.dat', header=None)
     clist = pd.read_csv(read_dir + 'chan_64.txt', delimiter='\t', header=None)
@@ -966,9 +976,9 @@ if do_bad_channel_check_table_gen:
     
     
 # THIS BLOCK GENERATES HISTOGRAM OF PERCENT BAD CHANNELS FOR THRESHOLD SELECTION
+# USING FLAT AND NOISY CHANNEL METRICS FROM PICKLE FILES GENERATED ABOVE
 if do_bad_channel_figure_gen: 
     # 1. CALCULATE % RETAINED AT ALL POSSIBLE VALUES (0-256) 
-    # 2. FIND 
     # 3. FIND MATCHING SUBJECT, VISIT, CHANNEL IN PACDAT AND UPDATE
     # 4. SAVE PACDAT
 
@@ -982,11 +992,7 @@ if do_bad_channel_figure_gen:
     exss =  pd.read_pickle(base_dir  + 'coga_eec_channel_quality_EXCESSIVE.pkl')
     
     flat_metrics = [0]*256 # FLAT CHANNEL METRICS
-    # THE NUMBER OF 1 SECOND INTERVALS (RANGE [0,256]) IN WHICH THE DIFFERENCE BETWEEN THE 
-    # MAXIMUM VALUE AND THE MININUM VALUE WAS LESS THAN 5 MICROVOLTS
     exss_metrics = [0]*256 # EXCESSIVE NOISE CHANNEL METRICS
-    # THE NUMBER OF INTERVALS IN WHICH THE DIFFERENCE BETWEEN THE MAXIMUM 
-    # VALUE AND THE MININUM VALUE WAS GREATER THAN 100 MICROVOLTS
     
     chans = np.array(exss.columns)
     chans = chans.tolist()
@@ -1060,6 +1066,7 @@ if do_bad_channel_figure_gen:
                 plt.close()
      
 if do_bad_channel_pacdat_update: 
+#  THIS UPDATES THE MASTER DATA TABLE pacdat
     flat_cutoff = 50 
     noise_cutoff = 50 
     startrow = 0 # SET TO 0 UNLESS PICKING UP WHERE LEFT OFF IN pacdat UPDATING
@@ -1130,6 +1137,9 @@ if do_bad_channel_pacdat_update:
     pacdat.to_pickle(base_dir + flatfn + '.pkl')
     
 if do_bad_channel_check:
+#  THIS MOVES IMAGE FILES DERIVED FROM 'BAD' CHANNELS AS MARKED IN pacdat INTO 
+# SEPARATE FOLDERS SO THAT THEY ARE NOT USED IN MACHINE LEARNING
+
     whichEEGfileExtention = 'png'
     base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\'
     read_dir = 'D:\\COGA\\eeg_figures_pacdat\\'
@@ -1160,6 +1170,8 @@ if do_bad_channel_check:
     
     del c, v, visitCodeList
     
+    # THIS IS HERE TO MOVE ALL FILES IN THE LIST TO SEE WHAT FILES LEFT OVER IN 
+    # LAPTOP FOLDER BUT CAN BE USED FOR OTHER PURPOSES
     pacdat = pd.read_pickle(base_dir + 'pacdat_cutoffs_flat_50_excessnoise_50.pkl')
     # for i in range(0,len(pacdat)):
     #     thisid = str(pacdat.iloc[i,0])
