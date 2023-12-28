@@ -49,9 +49,9 @@ relocate_images_by_alcoholism = False
 do_deep_learn = False               # USES DATA TABLE AS INPUT TO DEEP LEARNING NETWORK TRAINING AND TESTING
 generate_pac_images = False
 do_resnet_chanxfreq = False
-do_bad_channel_check_table_gen = True
+do_bad_channel_check_table_gen = False
 do_bad_channel_figure_gen = False
-do_bad_channel_pacdat_update = False
+do_bad_channel_pacdat_update = True
 do_bad_channel_check = False
 
 # PARAMETERS
@@ -880,7 +880,7 @@ if do_bad_channel_check_table_gen:
     # MAXIMUM VALUE AND THE MININUM VALUE WAS LESS THAN 5 MICROVOLTS
     
     # ~~~~~~~~~~~~ EXCESSIVE NOISE CHANNEL METRICS ~~~~~~~~~~~~~~~~
-    # THE NUMBER OF INTERVALS IN WHICH THE DIFFERENCE BETWEEN THE MAXIMUM 
+    # THE NUMBER OF 1 SECOND INTERVALS IN WHICH THE DIFFERENCE BETWEEN THE MAXIMUM 
     # VALUE AND THE MININUM VALUE WAS GREATER THAN 100 MICROVOLTS
     
     read_dir = 'C:\\Users\\crichard\\Documents\\'
@@ -888,8 +888,10 @@ if do_bad_channel_check_table_gen:
     demog_hdr = ['ID','this_visit','fname','chan_num']
     
     visit_pos = 2 # FOR USE IN DOWNSTREAM SPLIT OPERATION
-    
+    visit_letters = list(string.ascii_lowercase)
+
     d = pd.read_csv(read_dir + 'eeg_eval_12.15.23.dat', header=None)
+    
     clist = pd.read_csv(read_dir + 'chan_64.txt', delimiter='\t', header=None)
     hdr = clist.iloc[:,1].tolist()
     hdr = [h.strip() for h in hdr]
@@ -922,7 +924,9 @@ if do_bad_channel_check_table_gen:
             thisVisit = [visit_letters.index(thisVisitCode)][0] + 1
         except Exception as e:
             with open(base_dir + 'errors_from_eeg_quality_check.txt', 'a') as ff:
-                ff.write('FILENAME ' + fn + ' ' + str(e) + '\n')
+                note = 'FILENAME ' + fn + ' visit ' + thisVisitCode + '_' + str(e) + '\n'
+                ff.write(note)
+                print(note)
             continue
             
         thisID = csd.get_sub_from_fname(fn, 3).split('.')[0]
@@ -943,7 +947,7 @@ if do_bad_channel_check_table_gen:
             thisrow =  thisrow + [np.nan]*(len(qflat.columns)-len(thisrow))
             vals1 = pd.DataFrame([thisrow],columns=hdr)
         else:
-            print('PROBLEM WITH ' + fn)
+            print('PROBLEM WITH ' + fn + ', ' + str(len(thisrow)) + ' channels?')
             
         # COPY VALUES INTO DATAFRAMES THEN INCREMENT
         qflat.iloc[qcount,:] = vals1.iloc[0,:]    
@@ -1067,10 +1071,9 @@ if do_bad_channel_figure_gen:
      
 if do_bad_channel_pacdat_update: 
 #  THIS UPDATES THE MASTER DATA TABLE pacdat
-    flat_cutoff = 50 
-    noise_cutoff = 50 
+    flat_cutoff = 25 
+    noise_cutoff = 25 
     startrow = 0 # SET TO 0 UNLESS PICKING UP WHERE LEFT OFF IN pacdat UPDATING
-
     base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\'
     
     pacdat = pd.read_csv(base_dir + 'pacdat.csv')
@@ -1087,52 +1090,56 @@ if do_bad_channel_pacdat_update:
     
     flat =  pd.read_pickle(base_dir  + 'coga_eec_channel_quality_FLAT.pkl')
     exss =  pd.read_pickle(base_dir  + 'coga_eec_channel_quality_EXCESSIVE.pkl')
+    missing_count = 0 
     
+    # WE DON'T CARE ABOUT NON-EEG CHANNELS
     exclude_chs = ['X','Y','BLANK','Horizonta','Vertical','HEOG','VEOG']
-    
+    for ec in exclude_chs:
+        pdi = pacdat[(pacdat.channel==ec)].index
+        pacdat.drop(index=pdi, inplace=True)
+    # BUT NOW WE NEED TO RESET THE INDEX BECAUSE OF THE ROWS WE EXCLUDED ABOVE
+    pacdat.reset_index(drop=True,inplace=True)
+    # WE CAN NOW START GOING THROUGH EACH ROW OF pacdat 
+    # TO GET BAD CHANNEL VALUES FROM LOOKUP TABLES flat AND exss
     for i in range(startrow,len(pacdat)):
-        thisid = str(pacdat.ID[i])
-        thisvisit = pacdat.this_visit[i]
-        this_ch = pacdat.channel[i]
-        # WE DON'T CARE ABOUT NON-EEG CHANNELS
-        if any([c==this_ch for c in exclude_chs]):
-            continue
-        
-        # LOOKUP FOR FLAT CHANNEL METRICS
-        this_subj_vis = flat[(flat.ID==thisid) & (flat.this_visit==thisvisit)]
+        # GET LOOKUP VALUES FOR THIS ROW IN pacdat
+        this_id_pacdat = str(pacdat.ID[i])
+        thisvisit_pacdat = pacdat.this_visit[i]
+        this_ch_pacdat = pacdat.channel[i]
+        # USE LOOKUP VALUES IN BAD CHANNEL TABLE FOR FLAT CHANNEL METRICS
+        this_subj_vis = flat[(flat.ID==this_id_pacdat) & (flat.this_visit==thisvisit_pacdat)]
         # WE ONLY NEED TO DO THIS CHECK FOR EMPTY DATAFRAME ONCE BECAUSE IF 
         # IT'S EMPTY FOR flat THEN IT WILL BE EMPTY FOR exss
         if this_subj_vis.empty:
-            print('Subject ' + thisid + ' visit ' + str(thisvisit) + '' +' not found (i =  ' + str(i) + ')')
+            missing_count+=1
+            print('Subject ' + this_id_pacdat + ' visit ' + str(thisvisit_pacdat) + '' +' not found (i =  ' + str(i) + ')')
             continue
-        flat_score = this_subj_vis[[this_ch]].iloc[0,0]
-        
-            
+        flat_score = this_subj_vis[[this_ch_pacdat]].iloc[0,0]
+        # STORE THE FLAT CHANNEL 'SCORE' IN fs, A COLUMN TO BE ADDED BACK TO pacdat ONCE FILLED
+        fs.loc[i,('flat_score')] = flat_score
         if flat_score>flat_cutoff:
             bf.loc[i,('bad_flat')] = 1
             # pacdat.loc[i,('bad_flat')] = 1
         else:
             bf.loc[i,('bad_flat')] = 0
-        fs.loc[i,('flat_score')] = flat_score
-
         # LOOKUP FOR NOISY CHANNEL METRICS
-        this_subj_vis = exss[(exss.ID==thisid) & (exss.this_visit==thisvisit)]
-        noise_score = this_subj_vis[[this_ch]].iloc[0,0]
+        this_subj_vis = exss[(exss.ID==this_id_pacdat) & (exss.this_visit==thisvisit_pacdat)]
+        noise_score = this_subj_vis[[this_ch_pacdat]].iloc[0,0]
+        ns.loc[i,('noise_score')] = noise_score
         if noise_score>noise_cutoff:
             bn.loc[i,('bad_noisy')] = 1
             # pacdat.loc[i,('bad_noisy')] = 1
         else:
             bn.loc[i,('bad_noisy')] = 0
-        ns.loc[i,('noise_score')] = noise_score
-
     
     pacdat.insert(2,'bad_flat',bf)
     pacdat.insert(3,'flat_score',fs)
     pacdat.insert(4,'bad_noisy',bn)
     pacdat.insert(5,'noise_score',ns)
     # pacdat.to_pickle(base_dir + 'pacdat2.pkl')
-
-    flatfn = 'pacdat2_cutoffs_flat_' + str(flat_cutoff ) + '_excessnoise_' + str(noise_cutoff) + ''    
+    mcp = (missing_count/len(pacdat))*100
+    print(str(mcp) + '% of files in pacdat are missing from flat')
+    flatfn = 'pacdat_cutoffs_flat_' + str(flat_cutoff ) + '_excessnoise_' + str(noise_cutoff) + ''    
     # pacdat.to_csv(base_dir + flatfn + '.csv', index=False)
     pacdat.to_pickle(base_dir + flatfn + '.pkl')
     
@@ -1172,7 +1179,7 @@ if do_bad_channel_check:
     
     # THIS IS HERE TO MOVE ALL FILES IN THE LIST TO SEE WHAT FILES LEFT OVER IN 
     # LAPTOP FOLDER BUT CAN BE USED FOR OTHER PURPOSES
-    pacdat = pd.read_pickle(base_dir + 'pacdat_cutoffs_flat_50_excessnoise_50.pkl')
+    pacdat = pd.read_pickle(base_dir + 'pacdat2_cutoffs_flat_50_excessnoise_50.pkl')
     # for i in range(0,len(pacdat)):
     #     thisid = str(pacdat.iloc[i,0])
     #     thisvisit = pacdat.iloc[i,10]
