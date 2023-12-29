@@ -51,8 +51,8 @@ generate_pac_images = False
 do_resnet_chanxfreq = False
 do_bad_channel_check_table_gen = False
 do_bad_channel_figure_gen = False
-do_bad_channel_pacdat_update = True
-do_bad_channel_check = False
+do_bad_channel_pacdat_update = False
+do_bad_channel_check = True
 
 # PARAMETERS
 base_dir = "E:\\Documents\\COGA_eec\\data\\"
@@ -695,6 +695,10 @@ if relocate_images_by_alcoholism:
     pth = 'D:\\COGA_eec\\chan_hz_figures\\'
     alcpth = 'D:\\COGA_eec\\chan_hz_25_40yo_F\\alcoholic\\'
     nonpth = 'D:\\COGA_eec\\chan_hz_25_40yo_F\\nonalcoholic\\'
+    
+    
+    
+    
     # OPEN PICKLE FILE
     dat = pd.read_pickle(base_dir + 'chan_hz_dat.pkl')
     alc = dat[(dat.alcoholic==1) & (dat.age_this_visit>=25) & (dat.age_this_visit<=40) & (dat.sex=='F')]
@@ -815,6 +819,9 @@ if do_resnet_chanxfreq:
     from tensorflow.keras.optimizers import Adam
     # import cv2
 
+    # base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\' # LAPTOP    
+    # base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
+    
     pth = 'D:\\COGA_eec\\chan_hz_figures\\'
     
     img_height,img_width=224,224
@@ -871,6 +878,8 @@ if do_resnet_chanxfreq:
     
 
 if do_bad_channel_check_table_gen:
+    print('Starting do_bad_channel_check_table_gen\n')
+
 # THIS READS AND PROCESSES THE FLAT CHANNEL AND EXCESSIVE NOISE CHANNEL METICS
 # OUTPUTS OF THIS BLOCK ARE LOOKUP TABLES FOR DOWNSTREAM PROCESSING WITH
 # SUBJECT ID AND VISIT COLUMNS, ALL BY CHANNEL METRIC, SAVES THEM AS PICKLE FILES
@@ -883,16 +892,18 @@ if do_bad_channel_check_table_gen:
     # THE NUMBER OF 1 SECOND INTERVALS IN WHICH THE DIFFERENCE BETWEEN THE MAXIMUM 
     # VALUE AND THE MININUM VALUE WAS GREATER THAN 100 MICROVOLTS
     
-    read_dir = 'C:\\Users\\crichard\\Documents\\'
-    base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\'
+    # read_dir = 'C:\\Users\\crichard\\Documents\\' # LAPTOP    
+    # base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\' # LAPTOP    
+    base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
+    
     demog_hdr = ['ID','this_visit','fname','chan_num']
     
     visit_pos = 2 # FOR USE IN DOWNSTREAM SPLIT OPERATION
     visit_letters = list(string.ascii_lowercase)
 
-    d = pd.read_csv(read_dir + 'eeg_eval_12.15.23.dat', header=None)
+    d = pd.read_csv(base_dir + 'eeg_eval_12.15.23.dat', header=None)
     
-    clist = pd.read_csv(read_dir + 'chan_64.txt', delimiter='\t', header=None)
+    clist = pd.read_csv(base_dir + 'chan_64.txt', delimiter='\t', header=None)
     hdr = clist.iloc[:,1].tolist()
     hdr = [h.strip() for h in hdr]
 
@@ -988,7 +999,8 @@ if do_bad_channel_figure_gen:
 
     plot_figs = True
     figtype = 'cumulative' # cumulative histogram
-    base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\'
+    base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
+    # base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\' # LAPTOP
     
     # pacdat.to_csv(base_dir + 'pacdat' + '.csv', index=False)
     # pacdat = pd.read_csv(base_dir + 'pacdat.csv')
@@ -1070,11 +1082,13 @@ if do_bad_channel_figure_gen:
                 plt.close()
      
 if do_bad_channel_pacdat_update: 
+    print('Starting do_bad_channel_pacdat_update\n')
 #  THIS UPDATES THE MASTER DATA TABLE pacdat
     flat_cutoff = 25 
     noise_cutoff = 25 
     startrow = 0 # SET TO 0 UNLESS PICKING UP WHERE LEFT OFF IN pacdat UPDATING
-    base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\'
+    base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
+    # base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\' # LAPTOP
     
     pacdat = pd.read_csv(base_dir + 'pacdat.csv')
     # pacdat = pd.read_pickle(base_dir + 'pacdat.pkl')
@@ -1147,19 +1161,32 @@ if do_bad_channel_check:
 #  THIS MOVES IMAGE FILES DERIVED FROM 'BAD' CHANNELS AS MARKED IN pacdat INTO 
 # SEPARATE FOLDERS SO THAT THEY ARE NOT USED IN MACHINE LEARNING
 
-    whichEEGfileExtention = 'png'
-    base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\'
-    read_dir = 'D:\\COGA\\eeg_figures_pacdat\\'
+    # from PIL import Image
+
+
+    whichEEGfileExtention = 'jpg'
+    read_dir = 'D:\\COGA_eec\\pac_figures\\'  #  BIOWIZARD
+    base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
+    # whichEEGfileExtention = 'png'
+    # read_dir = 'D:\\COGA_eec\\eeg_figures\\'  #  BIOWIZARD
+    # base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\' # LAPTOP
     
-    pacdat_target_path = 'D:\\COGA\\eeg_figures_pacdat\\'
-    badf_target_path = 'D:\\COGA\\eeg_figures_flat\\'
-    badn_target_path = 'D:\\COGA\\eeg_figures_noise\\'
+    badf_target_path = 'D:\\COGA_eec\\pac_figures\\flat_channels\\'
+    badn_target_path = 'D:\\COGA_eec\\pac_figures\\noisy_channels\\'
+    # badf_target_path = 'D:\\COGA_eec\\eeg_figures_flat\\'
+    # badn_target_path = 'D:\\COGA_eec\\eeg_figures_noise\\'
+    # pacdat_target_path = 'D:\\COGA_eec\\eeg_figures_pacdat\\'
     
     chan_i = 0 
     visit_i = 3 
     id_i = 4 
     
-    figList = csd.get_file_list(read_dir, whichEEGfileExtention)
+    flat_cutoff = 200 # OUT OF 256
+    noise_cutoff = 250 # OUT OF 256
+
+    fl_alc = csd.get_file_list(read_dir + 'alcoholic\\', whichEEGfileExtention)
+    fl_nonalc = csd.get_file_list(read_dir + 'nonalcoholic\\', whichEEGfileExtention)    
+    figList = fl_alc + fl_nonalc
     fig_info = pd.DataFrame(figList, columns=['dir','fn'])
     
     c = [f.split('_')[chan_i] for f in  fig_info.fn]
@@ -1173,13 +1200,18 @@ if do_bad_channel_check:
     
     v = [f.split('_')[id_i] for f in  fig_info.fn]
     v = pd.DataFrame(v,columns=['ID'])
-    fig_info.insert(0,'ID',v)    
-    
-    del c, v, visitCodeList
+    fig_info.insert(0,'ID',v)  
+        
+    # # THIS BLOCK USED TO RESIZE IMAGES FOR RESNET-50
+    # # IN FUTURE VERSION PERHAPS AS A HELPER FUNCTION
+    # img2 = Image.open(write_dir + 'chan_hz_figures\\' + figFN)
+    # print(figFN)
+    # img2 = img2.resize((224, 224))
+    # img2.save(write_dir + 'chan_hz_figures\\' + figFN)
     
     # THIS IS HERE TO MOVE ALL FILES IN THE LIST TO SEE WHAT FILES LEFT OVER IN 
     # LAPTOP FOLDER BUT CAN BE USED FOR OTHER PURPOSES
-    pacdat = pd.read_pickle(base_dir + 'pacdat2_cutoffs_flat_50_excessnoise_50.pkl')
+    pacdat = pd.read_pickle(base_dir + 'pacdat_cutoffs_flat_25_excessnoise_25.pkl')
     # for i in range(0,len(pacdat)):
     #     thisid = str(pacdat.iloc[i,0])
     #     thisvisit = pacdat.iloc[i,10]
@@ -1191,26 +1223,77 @@ if do_bad_channel_check:
     #         source_path_fn = pth + fn
     #         os.rename(source_path_fn, pacdat_target_path + fn)
     
-    badf = pacdat[pacdat.bad_flat==1]    
-    for i in range(0,len(badf)):
-        thisid = str(badf.iloc[i,0])
-        thisvisit = badf.iloc[i,10]
-        this_ch = badf.iloc[i,8]
-        this_subj_vis = fig_info[(fig_info.ID==thisid) & (fig_info.this_visit==thisvisit) & (fig_info.channels==this_ch)]
-        if not this_subj_vis.empty:
-            pth = this_subj_vis.dir.values[0]
-            fn = this_subj_vis.fn.values[0]
-            bad_source_path_fn = pth + fn
-            os.rename(bad_source_path_fn, badf_target_path + fn)
+    # INDEX POSITIONS IN pacdat COLUMNS
+    id_i = 0
+    chan_i = 10 
+    vis_i = 12 
+    alc_diag_i = 33
 
-    badf = pacdat[pacdat.bad_noisy==1]
-    for i in range(0,len(badf)):
-        thisid = str(badf.iloc[i,0])
-        thisvisit = badf.iloc[i,10]
-        this_ch = badf.iloc[i,8]
+    missing_flat = 0
+    missing_noisy = 0
+
+    # bad = pacdat[pacdat.bad_flat==1]    
+    bad = pacdat[pacdat.flat_score>flat_cutoff]    
+    print('There are ' + str(len(bad)) + ' bad channel EEG files (more than ' + str(flat_cutoff) + ' flat 1 second intervals) ')
+    for i in range(0,len(bad)):
+        thisid = str(bad.iloc[i,id_i])
+        thisvisit = bad.iloc[i,vis_i]
+        this_ch = bad.iloc[i,chan_i]
         this_subj_vis = fig_info[(fig_info.ID==thisid) & (fig_info.this_visit==thisvisit) & (fig_info.channels==this_ch)]
         if not this_subj_vis.empty:
             pth = this_subj_vis.dir.values[0]
             fn = this_subj_vis.fn.values[0]
             bad_source_path_fn = pth + fn
-            os.rename(bad_source_path_fn, badn_target_path + fn)
+            this_alc_diag = bad.iloc[i,alc_diag_i]
+            if this_alc_diag:
+                diag_folder = 'alcoholic\\'
+            else:
+                diag_folder = 'nonalcoholic\\'
+            
+            
+            try:
+                os.rename(bad_source_path_fn, badf_target_path + diag_folder + fn)
+            except Exception as e:
+                missing_flat+=1
+                print('Some problem with moving ' + fn + '\t error msg: ' + str(e) + '\n')
+                with open(base_dir + 'errors_from_bad_channel_exclusion.txt', 'a') as bf:
+                    bf.write(fn + '\t' + str(e) + ' flat channel,' + diag_folder[:-1]  + ' \n')
+                continue    
+            print('Moved ' + fn + ' (' + str(i+1) + ' of ' + str(len(bad)) + ' flat channels) ' + ' - ' + diag_folder[:-1]  )
+        else:
+            missing_flat+=1
+    total_bad_flat = str(len(bad))
+    print('/nChannels in pacdat without flat channel information: ' + str(missing_flat) + ' out of ' + total_bad_flat + '/n')
+
+
+    bad = pacdat[pacdat.noise_score>noise_cutoff]    
+    # bad = pacdat[pacdat.bad_noisy==1]
+    print('There are ' + str(len(bad)) + ' bad channel EEG files (more than ' + str(noise_cutoff) + ' noisy 1 second intervals) /n')
+    for i in range(0,len(bad)):
+        thisid = str(bad.iloc[i,id_i])
+        thisvisit = bad.iloc[i,vis_i]
+        this_ch = bad.iloc[i,chan_i]
+        this_subj_vis = fig_info[(fig_info.ID==thisid) & (fig_info.this_visit==thisvisit) & (fig_info.channels==this_ch)]
+        if not this_subj_vis.empty:
+            pth = this_subj_vis.dir.values[0]
+            fn = this_subj_vis.fn.values[0]
+            bad_source_path_fn = pth + fn
+            this_alc_diag = bad.iloc[i,alc_diag_i]
+            if this_alc_diag:
+                diag_folder = 'alcoholic\\'
+            else:
+                diag_folder = 'nonalcoholic\\'
+            
+            try:
+                os.rename(bad_source_path_fn, badn_target_path + diag_folder + fn)
+            except Exception as e:
+                missing_flat+=1
+                print('Some problem with moving ' + fn + '\t error msg: ' + str(e) + '\n')
+                with open(base_dir + 'errors_from_bad_channel_exclusion.txt', 'a') as bf:
+                    bf.write(fn + '\t' + str(e) + ' noisy channel, ' + diag_folder[:-1]  + ' \n')
+                continue                
+            print('Moved ' + fn + ' (' + str(i+1) + ' of ' + str(len(bad)) + ' noisy channels) ' + ' - ' + diag_folder[:-1]  )
+        else:
+            missing_noisy+=1
+    total_bad_noisy = str(len(bad))
+    print('Channels in pacdat without noisy channel information: ' + str(missing_noisy) + ' out of ' + total_bad_noisy + '/n')

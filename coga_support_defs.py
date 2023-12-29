@@ -298,7 +298,10 @@ def get_band_psds(f, sfreq, FREQ_BANDS):
     
 def convert_visit_code(vc):
     import string
-    
+    vc = vc.lower()
     visit_letters = list(string.ascii_lowercase)
-    thisVisit = [visit_letters.index(vc)][0] + 1
+    try:
+        thisVisit = [visit_letters.index(vc)][0] + 1
+    except:
+        thisVisit = 999
     return thisVisit
