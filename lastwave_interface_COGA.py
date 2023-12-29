@@ -52,7 +52,9 @@ do_resnet_chanxfreq = False
 do_bad_channel_check_table_gen = False
 do_bad_channel_figure_gen = False
 do_bad_channel_pacdat_update = False
-do_bad_channel_check = True
+do_bad_channel_removal = False
+do_bad_channel_check = False
+do_resnet_pac = True
 
 # PARAMETERS
 base_dir = "E:\\Documents\\COGA_eec\\data\\"
@@ -1157,7 +1159,7 @@ if do_bad_channel_pacdat_update:
     # pacdat.to_csv(base_dir + flatfn + '.csv', index=False)
     pacdat.to_pickle(base_dir + flatfn + '.pkl')
     
-if do_bad_channel_check:
+if do_bad_channel_removal:
 #  THIS MOVES IMAGE FILES DERIVED FROM 'BAD' CHANNELS AS MARKED IN pacdat INTO 
 # SEPARATE FOLDERS SO THAT THEY ARE NOT USED IN MACHINE LEARNING
 
@@ -1297,3 +1299,139 @@ if do_bad_channel_check:
             missing_noisy+=1
     total_bad_noisy = str(len(bad))
     print('Channels in pacdat without noisy channel information: ' + str(missing_noisy) + ' out of ' + total_bad_noisy + '/n')
+    
+    
+if do_bad_channel_check:
+#  THIS MOVES IMAGE FILES DERIVED FROM 'BAD' CHANNELS AS MARKED IN pacdat INTO 
+# SEPARATE FOLDERS SO THAT THEY ARE NOT USED IN MACHINE LEARNING
+
+    from PIL import Image
+
+
+    whichEEGfileExtention = 'jpg'
+    read_dir = 'D:\\COGA_eec\\pac_figures\\'  #  BIOWIZARD
+    base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
+    # whichEEGfileExtention = 'png'
+    # read_dir = 'D:\\COGA_eec\\eeg_figures\\'  #  BIOWIZARD
+    # base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\' # LAPTOP
+    
+    badf_target_path = 'D:\\COGA_eec\\pac_figures\\flat_channels\\'
+    badn_target_path = 'D:\\COGA_eec\\pac_figures\\noisy_channels\\'
+    # badf_target_path = 'D:\\COGA_eec\\eeg_figures_flat\\'
+    # badn_target_path = 'D:\\COGA_eec\\eeg_figures_noise\\'
+    # pacdat_target_path = 'D:\\COGA_eec\\eeg_figures_pacdat\\'
+    
+    chan_i = 0 
+    visit_i = 3 
+    id_i = 4 
+    
+    flat_cutoff = 200 # OUT OF 256
+    noise_cutoff = 250 # OUT OF 256
+
+    fl_alc = csd.get_file_list(read_dir + 'alcoholic\\', whichEEGfileExtention)
+    fl_nonalc = csd.get_file_list(read_dir + 'nonalcoholic\\', whichEEGfileExtention)    
+    figList = fl_alc + fl_nonalc
+    
+    fig_info = pd.DataFrame(figList, columns=['dir','fn'])
+    
+    c = [f.split('_')[chan_i] for f in  fig_info.fn]
+    c = pd.DataFrame(c,columns=['channels'])
+    fig_info.insert(0,'channels',c)
+
+    visitCodeList = [f.split('_')[visit_i][0] for f in  fig_info.fn]
+    visitCodeList = [csd.convert_visit_code(v) for v in visitCodeList]    
+    v = pd.DataFrame(visitCodeList,columns=['this_visit'])
+    fig_info.insert(0,'this_visit',v)
+    
+    v = [f.split('_')[id_i] for f in  fig_info.fn]
+    v = pd.DataFrame(v,columns=['ID'])
+    fig_info.insert(0,'ID',v)  
+        
+    # THIS BLOCK USED TO RESIZE IMAGES FOR RESNET-50
+    # IN FUTURE VERSION PERHAPS AS A HELPER FUNCTION
+    for i in range(0,len(fig_info)):
+        thisfig_dir = fig_info.loc[i,'dir']
+        thisfig_fn = fig_info.loc[i,'fn']
+        
+        img2 = Image.open(thisfig_dir + thisfig_fn)
+        print('Resizing ' + thisfig_fn + ' (' + str(i+1) + ' of ' + str(len(fig_info)) + ')' )
+        img2 = img2.resize((224, 224))
+        img2.save(thisfig_dir + thisfig_fn)
+        img2.close()
+    
+
+if do_resnet_pac:
+    # after unimpressive training using ImageNet,
+    # tried setting weights to None,  
+    # then tried making each_layer trainable 
+    # can also change from categorical to binary label mode and
+    # the loss function fom categorical_crossentropy to binary_crossentropy
+    # can also check that the images are being read in RBG per input_shape 
+    # 224 x 224 x 3 prerequisite using applications.resnet50.preprocess_input
+    
+    import matplotlib.pyplot as plotter_lib
+    import numpy as np
+    # import PIL as image_lib
+    import tensorflow as tf
+    from tensorflow.keras.layers import Flatten
+    from keras.layers.core import Dense
+    from tensorflow.keras.models import Sequential
+    from tensorflow.keras.optimizers import Adam
+    # import cv2
+
+    # base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\' # LAPTOP    
+    # base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
+    
+    pth = 'D:\\COGA_eec\\pac_figures\\'
+    
+    img_height,img_width=224,224
+    batch_size=32
+    epochs=10
+
+    train_ds = tf.keras.preprocessing.image_dataset_from_directory(
+      pth,
+      validation_split=0.2,
+      subset="training",
+      seed=123,
+      label_mode='binary',
+      image_size=(img_height, img_width),
+      batch_size=batch_size)
+    
+    validation_ds = tf.keras.preprocessing.image_dataset_from_directory(
+        pth,
+        validation_split=0.2,
+        subset="validation",
+        seed=123,
+        label_mode='binary',
+        image_size=(img_height, img_width),
+        batch_size=batch_size)
+    
+    coga_model = Sequential()
+
+    pretrained_model_for_demo= tf.keras.applications.ResNet50(include_top=False,
+        input_shape=(img_height, img_width,3),
+        pooling='avg',
+        classes=2,
+        weights=None)
+    
+    for each_layer in pretrained_model_for_demo.layers:
+        each_layer.trainable=True
+    coga_model.add(pretrained_model_for_demo)
+        
+    coga_model.add(Flatten())
+    coga_model.add(Dense(512, activation='relu'))
+    coga_model.add(Dense(1, activation='sigmoid'))
+    
+    coga_model.compile(optimizer=Adam(learning_rate=0.001),loss=tf.keras.losses.BinaryCrossentropy(),metrics=['accuracy'])
+    history = coga_model.fit(train_ds, validation_data=validation_ds, epochs=epochs)
+    
+    plotter_lib.figure(figsize=(8, 8))
+    epochs_range= range(epochs)
+    plotter_lib.plot( epochs_range, history.history['accuracy'], label="Training Accuracy")
+    plotter_lib.plot(epochs_range, history.history['val_accuracy'], label="Validation Accuracy")
+    plotter_lib.axis(ymin=0.4,ymax=1)
+    plotter_lib.grid()
+    plotter_lib.title('Model Accuracy, binary crossentropy')
+    plotter_lib.ylabel('Accuracy')
+    plotter_lib.xlabel('Epochs')
+    plotter_lib.legend(['train', 'validation'])    
