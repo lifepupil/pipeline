@@ -54,7 +54,9 @@ do_bad_channel_figure_gen = False
 do_bad_channel_pacdat_update = False
 do_bad_channel_removal = False
 do_bad_channel_check = False
+do_filter_figures_by_condition = True
 do_resnet_pac = True
+
 
 # PARAMETERS
 base_dir = "E:\\Documents\\COGA_eec\\data\\"
@@ -694,17 +696,16 @@ if do_reshape_by_subject:
 
 
 if relocate_images_by_alcoholism:
-    pth = 'D:\\COGA_eec\\chan_hz_figures\\'
-    alcpth = 'D:\\COGA_eec\\chan_hz_25_40yo_F\\alcoholic\\'
-    nonpth = 'D:\\COGA_eec\\chan_hz_25_40yo_F\\nonalcoholic\\'
-    
-    
-    
+    pth = 'D:\\COGA_eec\\pac_figures\\'
+    alcpth = 'D:\\COGA_eec\\pac_25_40yo\\alcoholic\\'
+    nonpth = 'D:\\COGA_eec\\pac_25_40yo\\nonalcoholic\\'
     
     # OPEN PICKLE FILE
     dat = pd.read_pickle(base_dir + 'chan_hz_dat.pkl')
-    alc = dat[(dat.alcoholic==1) & (dat.age_this_visit>=25) & (dat.age_this_visit<=40) & (dat.sex=='F')]
-    nonalc = dat[(dat.alcoholic==0) & (dat.age_this_visit>=25) & (dat.age_this_visit<=40) & (dat.sex=='F')]
+    alc = dat[(dat.alcoholic==1) & (dat.age_this_visit>=25) & (dat.age_this_visit<=40)]
+    nonalc = dat[(dat.alcoholic==0) & (dat.age_this_visit>=25) & (dat.age_this_visit<=40)]
+    # alc = dat[(dat.alcoholic==1) & (dat.age_this_visit>=25) & (dat.age_this_visit<=40) & (dat.sex=='F')]
+    # nonalc = dat[(dat.alcoholic==0) & (dat.age_this_visit>=25) & (dat.age_this_visit<=40) & (dat.sex=='F')]
     
     # alc = dat[dat.alcoholic==1]
     # nonalc = dat[dat.alcoholic==0]
@@ -877,6 +878,11 @@ if do_resnet_chanxfreq:
     plotter_lib.ylabel('Accuracy')
     plotter_lib.xlabel('Epochs')
     plotter_lib.legend(['train', 'validation'])
+    
+    
+    
+    
+    
     
 
 if do_bad_channel_check_table_gen:
@@ -1084,8 +1090,8 @@ if do_bad_channel_figure_gen:
                 plt.close()
      
 if do_bad_channel_pacdat_update: 
-    print('Starting do_bad_channel_pacdat_update\n')
 #  THIS UPDATES THE MASTER DATA TABLE pacdat
+    print('Starting do_bad_channel_pacdat_update\n')
     flat_cutoff = 25 
     noise_cutoff = 25 
     startrow = 0 # SET TO 0 UNLESS PICKING UP WHERE LEFT OFF IN pacdat UPDATING
@@ -1159,12 +1165,14 @@ if do_bad_channel_pacdat_update:
     # pacdat.to_csv(base_dir + flatfn + '.csv', index=False)
     pacdat.to_pickle(base_dir + flatfn + '.pkl')
     
+    
+    
+    
+    
+    
 if do_bad_channel_removal:
 #  THIS MOVES IMAGE FILES DERIVED FROM 'BAD' CHANNELS AS MARKED IN pacdat INTO 
 # SEPARATE FOLDERS SO THAT THEY ARE NOT USED IN MACHINE LEARNING
-
-    # from PIL import Image
-
 
     whichEEGfileExtention = 'jpg'
     read_dir = 'D:\\COGA_eec\\pac_figures\\'  #  BIOWIZARD
@@ -1360,6 +1368,69 @@ if do_bad_channel_check:
         img2.close()
     
 
+
+
+if do_filter_figures_by_condition:
+# MOVE PAC IMAGE FILES THAT MEET CONDITIONS
+    
+    min_age = 25
+    max_age = 40
+    sex = 'M'
+    source_folder, targ_folder = 'pac_figures','pac_male'
+
+
+    which_pacdat = 'pacdat_cutoffs_flat_25_excessnoise_25.pkl'
+    whichEEGfileExtention = 'jpg'
+    read_dir = 'D:\\COGA_eec\\pac_figures\\'  #  BIOWIZARD
+    base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
+
+    
+    # CONSTANTS
+    chan_i = 0 
+    visit_i = 3 
+    id_i = 4 
+
+    fl_alc = csd.get_file_list(read_dir + 'alcoholic\\', whichEEGfileExtention)
+    fl_nonalc = csd.get_file_list(read_dir + 'nonalcoholic\\', whichEEGfileExtention)    
+    figList = fl_alc + fl_nonalc
+    
+    fig_info = pd.DataFrame(figList, columns=['dir','fn'])
+    
+    c = [f.split('_')[chan_i] for f in  fig_info.fn]
+    c = pd.DataFrame(c,columns=['channels'])
+    fig_info.insert(0,'channels',c)
+
+    visitCodeList = [f.split('_')[visit_i][0] for f in  fig_info.fn]
+    visitCodeList = [csd.convert_visit_code(v) for v in visitCodeList]    
+    v = pd.DataFrame(visitCodeList,columns=['this_visit'])
+    fig_info.insert(0,'this_visit',v)
+    
+    v = [f.split('_')[id_i] for f in  fig_info.fn]
+    v = pd.DataFrame(v,columns=['ID'])
+    fig_info.insert(0,'ID',v)  
+    
+    pacdat = pd.read_pickle(base_dir + which_pacdat)
+    subset = pacdat[(pacdat.sex==sex)]
+    # subset = pacdat[(pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age)]
+    del pacdat
+    
+    for i in range(0,len(fig_info)):
+        this_id = int(fig_info.loc[i,'ID'])
+        this_chan = fig_info.loc[i,'channels']
+        this_visit = fig_info.loc[i,'this_visit']
+        
+        this_subj_vis = subset[(subset.ID==this_id) & (subset.channel==this_chan) & (subset.this_visit==this_visit)]
+        if not this_subj_vis.empty:            
+            this_dir = fig_info.loc[i,'dir']
+            this_fn = fig_info.loc[i,'fn']
+            
+            old_path_fn = this_dir + this_fn
+            new_path_fn = this_dir + this_fn
+            new_path_fn = new_path_fn.replace(source_folder, targ_folder)
+            print('Moving file ' + this_fn)
+            os.rename(old_path_fn, new_path_fn)
+
+
 if do_resnet_pac:
     # after unimpressive training using ImageNet,
     # tried setting weights to None,  
@@ -1382,7 +1453,7 @@ if do_resnet_pac:
     # base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\' # LAPTOP    
     # base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
     
-    pth = 'D:\\COGA_eec\\pac_figures\\'
+    pth = 'D:\\COGA_eec\\pac_male\\'
     
     img_height,img_width=224,224
     batch_size=32
@@ -1412,10 +1483,10 @@ if do_resnet_pac:
         input_shape=(img_height, img_width,3),
         pooling='avg',
         classes=2,
-        weights=None)
+        weights='imagenet') # imagenet or None
     
     for each_layer in pretrained_model_for_demo.layers:
-        each_layer.trainable=True
+        each_layer.trainable=False
     coga_model.add(pretrained_model_for_demo)
         
     coga_model.add(Flatten())
@@ -1431,7 +1502,13 @@ if do_resnet_pac:
     plotter_lib.plot(epochs_range, history.history['val_accuracy'], label="Validation Accuracy")
     plotter_lib.axis(ymin=0.4,ymax=1)
     plotter_lib.grid()
-    plotter_lib.title('Model Accuracy, binary crossentropy')
+    plotter_lib.title('PAC males only')
     plotter_lib.ylabel('Accuracy')
     plotter_lib.xlabel('Epochs')
     plotter_lib.legend(['train', 'validation'])    
+    
+
+
+
+
+            
