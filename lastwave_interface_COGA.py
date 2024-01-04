@@ -1448,10 +1448,12 @@ if do_filter_figures_by_subject:
     visit_i = 3 
     id_i = 4 
 
-    # CODE BLOCK
+    # GET MASTER TABLE OUT 
     pacdat = pd.read_pickle(base_dir + which_pacdat)
 
+    # GET FILE LIST WITH GIVEN EXTENSION FROM SOURCE FOLDER 
     figList = csd.get_file_list(base_dir + source_folder, whichEEGfileExtention)
+    # MAKE A DATAFRAME TO ENRICH WITH ADDITIONAL COLUMNS DERIVED FROM FILENAME INFO
     fig_info = pd.DataFrame(figList, columns=['dir','fn'])
     
     c = [f.split('_')[chan_i] for f in  fig_info.fn]
@@ -1467,31 +1469,28 @@ if do_filter_figures_by_subject:
     v = pd.DataFrame(v,columns=['ID'])
     fig_info.insert(0,'ID',v)  
     
-    all_subj_figs = pd.unique(fig_info.ID)
-    vnumstr = str(len(all_subj_figs[i])) + 'visits_'
-
-    
+    # CYCLE THROUGH EVERY SUBJECT REPRESENTED IN FILES FROM SOURCE FOLDER
+    all_subj_figs = pd.unique(fig_info.ID) 
     for i in range(0,len(all_subj_figs)):
         this_subj = all_subj_figs[i]
         # FIGURES FOR ALL VISITS BY THIS SUBJECT
         svisits = fig_info[fig_info.ID==this_subj]
+        svisits = svisits.sort_values(by=['this_visit'])
         # WE WANT TO INCLUDE AUD DIAGNOSES IN FOLDER NAME FOR QUICK REF
-        vinfo = pacdat[(pacdat.ID==int(all_subj_figs[i])) & (pacdat.channel=='FZ')]
+        vinfo = pacdat[(pacdat.ID==int(this_subj)) & (pacdat.channel=='FZ')]
         vinfo = vinfo.sort_values(by=['this_visit'])
         
         alc_diag = ['_'+str(int(i)) for i in vinfo.alcoholic]
         folder_tag = '_' + str(len(vinfo)) + 'visits_AUD' + ''.join(alc_diag)
-        subj_path = base_dir + targ_folder + '\\' + all_subj_figs[i] + folder_tag + '\\'
+        subj_path = base_dir + targ_folder + '\\' + this_subj + folder_tag + '\\'
         
         if not os.path.exists(subj_path):
             os.makedirs(subj_path) 
         vinfo.to_csv(subj_path + 'details.csv')
 
-        for v in svisits.Index:
-            src = svisits.loc[v,'dir'] + svisits.loc[v,'fn']
+        for v in svisits.index:
+            src = svisits.loc[v,'dir'] + '\\' + svisits.loc[v,'fn']
             shutil.copy(src, subj_path + svisits.loc[v,'fn'])
-            
-            
 
 if do_resnet_pac:
     # after unimpressive training using ImageNet,
