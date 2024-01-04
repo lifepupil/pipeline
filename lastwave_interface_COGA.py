@@ -54,8 +54,9 @@ do_bad_channel_figure_gen = False
 do_bad_channel_pacdat_update = False
 do_bad_channel_removal = False
 do_bad_channel_check = False
-do_filter_figures_by_condition = True
-do_resnet_pac = True
+do_filter_figures_by_condition = False
+do_filter_figures_by_subject = True
+do_resnet_pac = False
 
 
 # PARAMETERS
@@ -1372,11 +1373,10 @@ if do_bad_channel_check:
 
 if do_filter_figures_by_condition:
 # MOVE PAC IMAGE FILES THAT MEET CONDITIONS
-    
     min_age = 25
     max_age = 40
-    sex = 'M'
-    source_folder, targ_folder = 'pac_figures','pac_male'
+    sex = 'F'
+    source_folder, targ_folder = 'pac_figures','pac_female'
 
 
     which_pacdat = 'pacdat_cutoffs_flat_25_excessnoise_25.pkl'
@@ -1431,6 +1431,68 @@ if do_filter_figures_by_condition:
             os.rename(old_path_fn, new_path_fn)
 
 
+
+
+if do_filter_figures_by_subject:
+# MOVE PAC IMAGE FILES FROM SAME SUBJECT
+
+    import shutil
+
+    base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
+    source_folder, targ_folder = 'pac_figures_all','pac_by_subj'
+    whichEEGfileExtention = 'jpg'
+    which_pacdat = 'pacdat_cutoffs_flat_25_excessnoise_25.pkl'
+
+    # CONSTANTS
+    chan_i = 0 
+    visit_i = 3 
+    id_i = 4 
+
+    # CODE BLOCK
+    pacdat = pd.read_pickle(base_dir + which_pacdat)
+
+    figList = csd.get_file_list(base_dir + source_folder, whichEEGfileExtention)
+    fig_info = pd.DataFrame(figList, columns=['dir','fn'])
+    
+    c = [f.split('_')[chan_i] for f in  fig_info.fn]
+    c = pd.DataFrame(c,columns=['channels'])
+    fig_info.insert(0,'channels',c)
+
+    visitCodeList = [f.split('_')[visit_i][0] for f in  fig_info.fn]
+    visitCodeList = [csd.convert_visit_code(v) for v in visitCodeList]    
+    v = pd.DataFrame(visitCodeList,columns=['this_visit'])
+    fig_info.insert(0,'this_visit',v)
+    
+    v = [f.split('_')[id_i] for f in  fig_info.fn]
+    v = pd.DataFrame(v,columns=['ID'])
+    fig_info.insert(0,'ID',v)  
+    
+    all_subj_figs = pd.unique(fig_info.ID)
+    vnumstr = str(len(all_subj_figs[i])) + 'visits_'
+
+    
+    for i in range(0,len(all_subj_figs)):
+        this_subj = all_subj_figs[i]
+        # FIGURES FOR ALL VISITS BY THIS SUBJECT
+        svisits = fig_info[fig_info.ID==this_subj]
+        # WE WANT TO INCLUDE AUD DIAGNOSES IN FOLDER NAME FOR QUICK REF
+        vinfo = pacdat[(pacdat.ID==int(all_subj_figs[i])) & (pacdat.channel=='FZ')]
+        vinfo = vinfo.sort_values(by=['this_visit'])
+        
+        alc_diag = ['_'+str(int(i)) for i in vinfo.alcoholic]
+        folder_tag = '_' + str(len(vinfo)) + 'visits_AUD' + ''.join(alc_diag)
+        subj_path = base_dir + targ_folder + '\\' + all_subj_figs[i] + folder_tag + '\\'
+        
+        if not os.path.exists(subj_path):
+            os.makedirs(subj_path) 
+        vinfo.to_csv(subj_path + 'details.csv')
+
+        for v in svisits.Index:
+            src = svisits.loc[v,'dir'] + svisits.loc[v,'fn']
+            shutil.copy(src, subj_path + svisits.loc[v,'fn'])
+            
+            
+
 if do_resnet_pac:
     # after unimpressive training using ImageNet,
     # tried setting weights to None,  
@@ -1453,7 +1515,7 @@ if do_resnet_pac:
     # base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\' # LAPTOP    
     # base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
     
-    pth = 'D:\\COGA_eec\\pac_male\\'
+    pth = 'D:\\COGA_eec\\pac_female\\'
     
     img_height,img_width=224,224
     batch_size=32
@@ -1502,7 +1564,7 @@ if do_resnet_pac:
     plotter_lib.plot(epochs_range, history.history['val_accuracy'], label="Validation Accuracy")
     plotter_lib.axis(ymin=0.4,ymax=1)
     plotter_lib.grid()
-    plotter_lib.title('PAC males only')
+    plotter_lib.title('PAC females only')
     plotter_lib.ylabel('Accuracy')
     plotter_lib.xlabel('Epochs')
     plotter_lib.legend(['train', 'validation'])    
