@@ -1473,6 +1473,7 @@ if do_filter_figures_by_subject:
     all_subj_figs = pd.unique(fig_info.ID) 
     for i in range(0,len(all_subj_figs)):
         this_subj = all_subj_figs[i]
+        print(this_subj)
         # FIGURES FOR ALL VISITS BY THIS SUBJECT
         svisits = fig_info[fig_info.ID==this_subj]
         svisits = svisits.sort_values(by=['this_visit'])
@@ -1480,7 +1481,7 @@ if do_filter_figures_by_subject:
         vinfo = pacdat[(pacdat.ID==int(this_subj)) & (pacdat.channel=='FZ')]
         vinfo = vinfo.sort_values(by=['this_visit'])
         
-        alc_diag = ['_'+str(int(i)) for i in vinfo.alcoholic]
+        alc_diag = ['_'+str(int(i)) for i in vinfo.AUD_this_visit]
         folder_tag = '_' + str(len(vinfo)) + 'visits_AUD' + ''.join(alc_diag)
         subj_path = base_dir + targ_folder + '\\' + this_subj + folder_tag + '\\'
         
