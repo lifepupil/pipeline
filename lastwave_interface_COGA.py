@@ -39,24 +39,24 @@ import coga_support_defs as csd
 
 
 # INSTANCE VARIABLES
-do_sas_convert = False              # TO CONVERT .SAS7PDAT FILES TO TABLES SO THAT SUBJECT METADATA CAN BE USED DOWNSTREAM
-do_plot_eeg_signal_and_mwt = False  # TO PLOT SIGNAL AND HEATMAP FOR A GIVEN FILE
-do_filter_eeg_signal_cnt = False    # TO DO LOW PASS, HIGH PASS, NOTCH FILTER TO REMOVE LINE NOISE FROM SIGNAL, AND ICA
-make_data_table = False              # GENERATED A DATA TABLE WITH DEMOGRAPHIC INFO, ALCOHOLISM STATUS, AND MACHINE LEARNING INPUTS, E.G. BAND POWER
-do_stats = False                   # FOR TRADITIONAL STATISTICAL ANALYSIS 
-do_reshape_by_subject = False       # RESHAPES pacdat SO THAT EACH ROW IS ONE SUBJECT-VISIT WITH ALL CHANNELS AT ALL FREQUENCY BANDS
+do_sas_convert =                False              # TO CONVERT .SAS7PDAT FILES TO TABLES SO THAT SUBJECT METADATA CAN BE USED DOWNSTREAM
+do_plot_eeg_signal_and_mwt =    False  # TO PLOT SIGNAL AND HEATMAP FOR A GIVEN FILE
+do_filter_eeg_signal_cnt =      False    # TO DO LOW PASS, HIGH PASS, NOTCH FILTER TO REMOVE LINE NOISE FROM SIGNAL, AND ICA
+make_data_table =               False              # GENERATED A DATA TABLE WITH DEMOGRAPHIC INFO, ALCOHOLISM STATUS, AND MACHINE LEARNING INPUTS, E.G. BAND POWER
+do_stats =                      False                   # FOR TRADITIONAL STATISTICAL ANALYSIS 
+do_reshape_by_subject =         False       # RESHAPES pacdat SO THAT EACH ROW IS ONE SUBJECT-VISIT WITH ALL CHANNELS AT ALL FREQUENCY BANDS
 relocate_images_by_alcoholism = False
-do_deep_learn = False               # USES DATA TABLE AS INPUT TO DEEP LEARNING NETWORK TRAINING AND TESTING
-generate_pac_images = False
-do_resnet_chanxfreq = False
+do_deep_learn =                 False               # USES DATA TABLE AS INPUT TO DEEP LEARNING NETWORK TRAINING AND TESTING
+generate_pac_images =           False
+do_resnet_chanxfreq =           False
 do_bad_channel_check_table_gen = False
-do_bad_channel_figure_gen = False
-do_bad_channel_pacdat_update = False
-do_bad_channel_removal = False
-do_bad_channel_check = False
+do_bad_channel_figure_gen =     False
+do_bad_channel_pacdat_update =  False
+do_bad_channel_removal =        False
+do_bad_channel_check =          False
+do_filter_figures_by_subject =  False
 do_filter_figures_by_condition = False
-do_filter_figures_by_subject = True
-do_resnet_pac = False
+do_resnet_pac =                 True
 
 
 # PARAMETERS
@@ -696,30 +696,97 @@ if do_reshape_by_subject:
 
 
 
+
+
 if relocate_images_by_alcoholism:
+    import shutil
+    
+    which_pacdat = 'pacdat_cutoffs_flat_25_excessnoise_25.pkl'
+    whichEEGfileExtention = 'jpg'
+    source_folder, targ_folder = 'chan_hz_figures_all','chan_hz'
+
+    read_dir = 'D:\\COGA_eec\\' + source_folder + '\\'  #  BIOWIZARD
+    base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
+    
     pth = 'D:\\COGA_eec\\pac_figures\\'
-    alcpth = 'D:\\COGA_eec\\pac_25_40yo\\alcoholic\\'
-    nonpth = 'D:\\COGA_eec\\pac_25_40yo\\nonalcoholic\\'
+    alcpth = 'D:\\COGA_eec\\pac_figures\\alcoholic\\'
+    nonpth = 'D:\\COGA_eec\\pac_figures\\nonalcoholic\\'
+    
+    # CONSTANTS
+    chan_i = 0 
+    visit_i = 3 
+    id_i = 4 
     
     # OPEN PICKLE FILE
-    dat = pd.read_pickle(base_dir + 'chan_hz_dat.pkl')
-    alc = dat[(dat.alcoholic==1) & (dat.age_this_visit>=25) & (dat.age_this_visit<=40)]
-    nonalc = dat[(dat.alcoholic==0) & (dat.age_this_visit>=25) & (dat.age_this_visit<=40)]
-    # alc = dat[(dat.alcoholic==1) & (dat.age_this_visit>=25) & (dat.age_this_visit<=40) & (dat.sex=='F')]
-    # nonalc = dat[(dat.alcoholic==0) & (dat.age_this_visit>=25) & (dat.age_this_visit<=40) & (dat.sex=='F')]
+    pacdat = pd.read_pickle(base_dir + which_pacdat)
+    # dat = pd.read_pickle(base_dir + 'chan_hz_dat.pkl')
+    subset = pacdat[(pacdat.channel=='FZ')]
+
+    # alc = dat[(dat.AUD_this_visit==1) & (dat.channel=='FZ')]
+    # nonalc = dat[(dat.AUD_this_visit==0) & (dat.channel=='FZ')]
+    # alc = dat[(dat.AUD_this_visit==1) & (dat.age_this_visit>=25) & (dat.age_this_visit<=40) & (dat.sex=='F')]
+    # nonalc = dat[(dat.AUD_this_visit==0) & (dat.age_this_visit>=25) & (dat.age_this_visit<=40) & (dat.sex=='F')]
     
-    # alc = dat[dat.alcoholic==1]
-    # nonalc = dat[dat.alcoholic==0]
+    # GET FILE LIST WITH GIVEN EXTENSION FROM SOURCE FOLDER 
+    figList = csd.get_file_list(base_dir + source_folder, whichEEGfileExtention)
+    # MAKE A DATAFRAME TO ENRICH WITH ADDITIONAL COLUMNS DERIVED FROM FILENAME INFO
+    fig_info = pd.DataFrame(figList, columns=['dir','fn'])
     
-    for i in range(0,len(alc)):
-        thisjpg = alc.iloc[i].chan_hz_path
-        fn = thisjpg.split('\\')[-1]
-        os.rename(thisjpg, alcpth + fn)
+    c = [f.split('_')[chan_i] for f in  fig_info.fn]
+    c = pd.DataFrame(c,columns=['channels'])
+    fig_info.insert(0,'channels',c)
+
+    visitCodeList = [f.split('_')[visit_i][0] for f in  fig_info.fn]
+    visitCodeList = [csd.convert_visit_code(v) for v in visitCodeList]    
+    v = pd.DataFrame(visitCodeList,columns=['this_visit'])
+    fig_info.insert(0,'this_visit',v)
     
-    for i in range(0,len(nonalc)):
-        thisjpg = nonalc.iloc[i].chan_hz_path
-        fn = thisjpg.split('\\')[-1]
-        os.rename(thisjpg, nonpth + fn)
+    v = [f.split('_')[id_i] for f in  fig_info.fn]
+    v = pd.DataFrame(v,columns=['ID'])
+    fig_info.insert(0,'ID',v)  
+    
+    # alc = dat[dat.AUD_this_visit==1]
+    # nonalc = dat[dat.AUD_this_visit==0]
+    # alc.reset_index(drop=True,inplace=True)
+
+    for i in range(0,len(fig_info)):
+        this_id = int(fig_info.loc[i,'ID'])
+        this_chan = fig_info.loc[i,'channels']
+        this_visit = fig_info.loc[i,'this_visit']
+        
+        this_subj_vis = subset[(subset.ID==this_id) & (subset.channel==this_chan) & (subset.this_visit==this_visit)]
+        if this_subj_vis.empty:
+            print('Missing ' + fig_info.loc[i,'fn'])
+        else:
+            this_dir = fig_info.loc[i,'dir']
+            this_fn = fig_info.loc[i,'fn']
+            
+            this_alc_diag = this_subj_vis.AUD_this_visit.values[0]
+            if this_subj_vis.AUD_this_visit.values[0]:
+                diag_folder = 'alcoholic'
+            else:
+                diag_folder = 'nonalcoholic'
+            
+                        
+            old_path_fn = this_dir + '\\' + this_fn
+            
+            new_path_fn = this_dir + '\\' + this_fn
+            new_path_fn = new_path_fn.replace(source_folder, targ_folder + '\\' + diag_folder)
+            print('Copying file ' + this_fn)
+            shutil.copy(old_path_fn, new_path_fn)
+
+    # for i in range(0,len(alc)):
+    #     thisjpg = alc.iloc[i].chan_hz_path
+    #     fn = thisjpg.split('\\')[-1]
+    #     os.rename(thisjpg, alcpth + fn)
+    
+    # for i in range(0,len(nonalc)):
+    #     thisjpg = nonalc.iloc[i].chan_hz_path
+    #     fn = thisjpg.split('\\')[-1]
+    #     os.rename(thisjpg, nonpth + fn)
+    
+    
+    
     
     
 if do_deep_learn:
@@ -1370,69 +1437,6 @@ if do_bad_channel_check:
     
 
 
-
-if do_filter_figures_by_condition:
-# MOVE PAC IMAGE FILES THAT MEET CONDITIONS
-    min_age = 25
-    max_age = 40
-    sex = 'F'
-    source_folder, targ_folder = 'pac_figures','pac_female'
-
-
-    which_pacdat = 'pacdat_cutoffs_flat_25_excessnoise_25.pkl'
-    whichEEGfileExtention = 'jpg'
-    read_dir = 'D:\\COGA_eec\\pac_figures\\'  #  BIOWIZARD
-    base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
-
-    
-    # CONSTANTS
-    chan_i = 0 
-    visit_i = 3 
-    id_i = 4 
-
-    fl_alc = csd.get_file_list(read_dir + 'alcoholic\\', whichEEGfileExtention)
-    fl_nonalc = csd.get_file_list(read_dir + 'nonalcoholic\\', whichEEGfileExtention)    
-    figList = fl_alc + fl_nonalc
-    
-    fig_info = pd.DataFrame(figList, columns=['dir','fn'])
-    
-    c = [f.split('_')[chan_i] for f in  fig_info.fn]
-    c = pd.DataFrame(c,columns=['channels'])
-    fig_info.insert(0,'channels',c)
-
-    visitCodeList = [f.split('_')[visit_i][0] for f in  fig_info.fn]
-    visitCodeList = [csd.convert_visit_code(v) for v in visitCodeList]    
-    v = pd.DataFrame(visitCodeList,columns=['this_visit'])
-    fig_info.insert(0,'this_visit',v)
-    
-    v = [f.split('_')[id_i] for f in  fig_info.fn]
-    v = pd.DataFrame(v,columns=['ID'])
-    fig_info.insert(0,'ID',v)  
-    
-    pacdat = pd.read_pickle(base_dir + which_pacdat)
-    subset = pacdat[(pacdat.sex==sex)]
-    # subset = pacdat[(pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age)]
-    del pacdat
-    
-    for i in range(0,len(fig_info)):
-        this_id = int(fig_info.loc[i,'ID'])
-        this_chan = fig_info.loc[i,'channels']
-        this_visit = fig_info.loc[i,'this_visit']
-        
-        this_subj_vis = subset[(subset.ID==this_id) & (subset.channel==this_chan) & (subset.this_visit==this_visit)]
-        if not this_subj_vis.empty:            
-            this_dir = fig_info.loc[i,'dir']
-            this_fn = fig_info.loc[i,'fn']
-            
-            old_path_fn = this_dir + this_fn
-            new_path_fn = this_dir + this_fn
-            new_path_fn = new_path_fn.replace(source_folder, targ_folder)
-            print('Moving file ' + this_fn)
-            os.rename(old_path_fn, new_path_fn)
-
-
-
-
 if do_filter_figures_by_subject:
 # MOVE PAC IMAGE FILES FROM SAME SUBJECT
 
@@ -1493,6 +1497,159 @@ if do_filter_figures_by_subject:
             src = svisits.loc[v,'dir'] + '\\' + svisits.loc[v,'fn']
             shutil.copy(src, subj_path + svisits.loc[v,'fn'])
 
+
+
+
+if do_filter_figures_by_condition:
+# MOVE PAC IMAGE FILES THAT MEET CONDITIONS
+    import shutil
+    
+    min_age = 0
+    max_age = 100 
+    sex = 'both' # F M or both 
+    source_folder, targ_folder = 'chan_hz','chan_hz_AUD_by_visit_all'
+    diag_dirs_exist = False # HAVE THE IMAGES ALREADY BEEN SORTED INTO ALCOHOLIC AND NONALCHOLIC?
+    chan_in_fn = False # IS THERE CHANNEL INFORMATION IN THE FILENAME?
+    
+    which_pacdat = 'pacdat_cutoffs_flat_25_excessnoise_25.pkl'
+    whichEEGfileExtention = 'jpg'
+    read_dir = 'D:\\COGA_eec\\' + source_folder + '\\'  #  BIOWIZARD
+    base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
+    
+    # CONSTANTS 
+    # FOR PAC IMAGES
+    # chan_i = 0 
+    # visit_i = 3 
+    # id_i = 4 
+
+    # FOR CHANNEL X FREQUENCY BAND SPECTAL POWER IMAGES
+    # EXAMPLE: 'eec_1_a1_10003051_cnt_256.jpg'
+    visit_i = 2 
+    id_i = 3
+
+    if diag_dirs_exist:
+        fl_alc = csd.get_file_list(read_dir + 'alcoholic\\', whichEEGfileExtention)
+        fl_nonalc = csd.get_file_list(read_dir + 'nonalcoholic\\', whichEEGfileExtention)    
+        figList = fl_alc + fl_nonalc
+    else:
+        # GET FILE LIST WITH GIVEN EXTENSION FROM SOURCE FOLDER 
+        figList = csd.get_file_list(read_dir, whichEEGfileExtention)
+    
+    # MAKE A DATAFRAME TO ENRICH WITH ADDITIONAL COLUMNS DERIVED FROM FILENAME INFO
+    fig_info = pd.DataFrame(figList, columns=['dir','fn'])
+    
+    # TO PROCESS CHANNEL INFO IN FILE NAMES
+    if chan_in_fn:
+        c = [f.split('_')[chan_i] for f in  fig_info.fn]
+        c = pd.DataFrame(c,columns=['channels'])
+        fig_info.insert(0,'channels',c)
+
+    visitCodeList = [f.split('_')[visit_i][0] for f in  fig_info.fn]
+    visitCodeList = [csd.convert_visit_code(v) for v in visitCodeList]    
+    v = pd.DataFrame(visitCodeList,columns=['this_visit'])
+    fig_info.insert(0,'this_visit',v)
+    
+    v = [f.split('_')[id_i] for f in  fig_info.fn]
+    v = pd.DataFrame(v,columns=['ID'])
+    fig_info.insert(0,'ID',v)  
+    
+    pacdat = pd.read_pickle(base_dir + which_pacdat)
+        
+    # del pacdat
+    
+    if chan_in_fn:
+        if not sex=='both':    
+            subset = pacdat[(pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.sex==sex) & (pacdat.channel=='FZ')]
+        else:
+            subset = pacdat[(pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.channel=='FZ')]
+
+        for i in range(0,len(fig_info)):
+            this_id = int(fig_info.loc[i,'ID'])
+            this_chan = fig_info.loc[i,'channels']
+            this_visit = fig_info.loc[i,'this_visit']
+            
+            this_subj_vis = subset[(subset.ID==this_id) & (subset.channel==this_chan) & (subset.this_visit==this_visit)]
+            if not this_subj_vis.empty:            
+                this_dir = fig_info.loc[i,'dir']
+                this_fn = fig_info.loc[i,'fn']
+                
+                this_alc_diag = this_subj_vis.AUD_this_visit.values[0]
+                if this_subj_vis.AUD_this_visit.values[0]:
+                    diag_folder = 'alcoholic'
+                else:
+                    diag_folder = 'nonalcoholic'
+                    
+                
+                old_path_fn = this_dir + this_fn
+                
+                new_path_fn = this_dir
+                new_path_fn = new_path_fn.replace(source_folder, targ_folder + '\\' + diag_folder)
+                
+                print('Copying file ' + this_fn)
+                if not os.path.exists(new_path_fn):
+                    os.makedirs(new_path_fn) 
+                shutil.copy(old_path_fn, new_path_fn + this_fn)
+        
+        print('There are ' + str(len(subset)) + ' with ' + str(min_age) + '-' + str(max_age) + ' age range of ' + sex + ' \n')
+        if 0:
+            subset[['age_this_visit']].plot.hist(bins=20)        
+            
+            
+            
+    
+            
+                        
+                # old_path_fn = this_dir + '\\' + this_fn
+                
+                # new_path_fn = this_dir + '\\' + this_fn
+                # print('Copying file ' + this_fn)
+                # shutil.copy(old_path_fn, new_path_fn)
+            
+            
+    else:
+        if not sex=='both':    
+            subset = pacdat[(pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.sex==sex)]
+        else:    
+            subset = pacdat[(pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age)]
+
+        for i in range(0,len(fig_info)):
+            this_id = int(fig_info.loc[i,'ID'])
+            this_visit = fig_info.loc[i,'this_visit']
+            
+            this_subj_vis = subset[(subset.ID==this_id) & (subset.this_visit==this_visit)]
+            if not this_subj_vis.empty:            
+                this_dir = fig_info.loc[i,'dir']
+                this_fn = fig_info.loc[i,'fn']
+                
+                # old_path_fn = this_dir + this_fn
+                # new_path_fn = this_dir
+                # new_path_fn = new_path_fn.replace(source_folder, targ_folder)
+                # print('Copying file ' + this_fn)
+                # if not os.path.exists(new_path_fn):
+                #     os.makedirs(new_path_fn) 
+                # shutil.copy(old_path_fn, new_path_fn + this_fn)
+                
+                this_alc_diag = this_subj_vis.AUD_this_visit.values[0]
+                if this_subj_vis.AUD_this_visit.values[0]:
+                    diag_folder = 'alcoholic'
+                else:
+                    diag_folder = 'nonalcoholic'
+                    
+                
+                old_path_fn = this_dir + this_fn
+                
+                new_path_fn = this_dir
+                new_path_fn = new_path_fn.replace(source_folder, targ_folder + '\\' + diag_folder)
+                
+                print('Copying file ' + this_fn)
+                if not os.path.exists(new_path_fn):
+                    os.makedirs(new_path_fn) 
+                shutil.copy(old_path_fn, new_path_fn + this_fn)
+        print('There are ' + str(len(subset)) + ' with ' + str(min_age) + '-' + str(max_age) + ' age range of ' + sex + ' \n')
+        if 0:
+            subset[['age_this_visit']].plot.hist(bins=20)     
+
+
 if do_resnet_pac:
     # after unimpressive training using ImageNet,
     # tried setting weights to None,  
@@ -1514,18 +1671,23 @@ if do_resnet_pac:
 
     # base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\' # LAPTOP    
     # base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
-    
-    pth = 'D:\\COGA_eec\\pac_female\\'
-    
+    learning_rate = 0.0025
+    each_layer_trainable = False
+    pooling = 'avg'
+    pth = 'D:\\COGA_eec\\chan_hz_AUD_by_visit_all\\'
+    data_str = 'chan x hz ' # PAC
+    title_str = 'FZ Age 0-100, sex both, AUDbyVisit '
+
+
     img_height,img_width=224,224
-    batch_size=32
+    batch_size=64
     epochs=10
 
     train_ds = tf.keras.preprocessing.image_dataset_from_directory(
       pth,
       validation_split=0.2,
       subset="training",
-      seed=123,
+      seed=999,
       label_mode='binary',
       image_size=(img_height, img_width),
       batch_size=batch_size)
@@ -1534,7 +1696,7 @@ if do_resnet_pac:
         pth,
         validation_split=0.2,
         subset="validation",
-        seed=123,
+        seed=999,
         label_mode='binary',
         image_size=(img_height, img_width),
         batch_size=batch_size)
@@ -1543,20 +1705,22 @@ if do_resnet_pac:
 
     pretrained_model_for_demo= tf.keras.applications.ResNet50(include_top=False,
         input_shape=(img_height, img_width,3),
-        pooling='avg',
+        pooling=pooling,
         classes=2,
         weights='imagenet') # imagenet or None
     
     for each_layer in pretrained_model_for_demo.layers:
-        each_layer.trainable=False
+        each_layer.trainable=each_layer_trainable
     coga_model.add(pretrained_model_for_demo)
         
     coga_model.add(Flatten())
     coga_model.add(Dense(512, activation='relu'))
     coga_model.add(Dense(1, activation='sigmoid'))
-    
-    coga_model.compile(optimizer=Adam(learning_rate=0.001),loss=tf.keras.losses.BinaryCrossentropy(),metrics=['accuracy'])
+
+    coga_model.compile(optimizer=Adam(learning_rate=learning_rate),loss=tf.keras.losses.BinaryCrossentropy(),metrics=['accuracy'])
     history = coga_model.fit(train_ds, validation_data=validation_ds, epochs=epochs)
+    
+    title_str+=', lr=' + str(learning_rate) + ' pooling=' + pooling + ' '
     
     plotter_lib.figure(figsize=(8, 8))
     epochs_range= range(epochs)
@@ -1564,12 +1728,21 @@ if do_resnet_pac:
     plotter_lib.plot(epochs_range, history.history['val_accuracy'], label="Validation Accuracy")
     plotter_lib.axis(ymin=0.4,ymax=1)
     plotter_lib.grid()
-    plotter_lib.title('PAC females only')
+    plotter_lib.title(data_str + ' ' + title_str)
     plotter_lib.ylabel('Accuracy')
     plotter_lib.xlabel('Epochs')
     plotter_lib.legend(['train', 'validation'])    
     
-
+    plotter_lib.figure(figsize=(8, 8))
+    epochs_range= range(epochs)
+    plotter_lib.plot( epochs_range, history.history['loss'], label="Training Loss")
+    plotter_lib.plot(epochs_range, history.history['val_loss'], label="Validation Loss")
+    plotter_lib.axis(ymin=0.4,ymax=1)
+    plotter_lib.grid()
+    plotter_lib.title(data_str + ' ' + title_str)
+    plotter_lib.ylabel('Loss')
+    plotter_lib.xlabel('Epochs')
+    plotter_lib.legend(['train', 'validation'])  
 
 
 
