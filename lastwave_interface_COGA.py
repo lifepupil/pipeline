@@ -55,7 +55,7 @@ do_bad_channel_pacdat_update =  False
 do_bad_channel_removal =        False
 do_bad_channel_check =          False
 do_filter_figures_by_subject =  False
-do_filter_figures_by_condition = False
+do_filter_figures_by_condition = True
 do_resnet_pac =                 True
 
 
@@ -1503,13 +1503,18 @@ if do_filter_figures_by_subject:
 if do_filter_figures_by_condition:
 # MOVE PAC IMAGE FILES THAT MEET CONDITIONS
     import shutil
-    
-    min_age = 0
-    max_age = 100 
-    sex = 'both' # F M or both 
-    source_folder, targ_folder = 'chan_hz','chan_hz_AUD_by_visit_all'
+
+    title_str = 'Age 10-20 females'    
+    data_str = 'PAC' # PAC chanxHz
+    min_age = 10
+    max_age = 20
+    sex = 'F' # F M or both 
+
     diag_dirs_exist = False # HAVE THE IMAGES ALREADY BEEN SORTED INTO ALCOHOLIC AND NONALCHOLIC?
-    chan_in_fn = False # IS THERE CHANNEL INFORMATION IN THE FILENAME?
+    chan_in_fn = True # IS THERE CHANNEL INFORMATION IN THE FILENAME?
+    
+    source_folder = 'pac_figures_all'
+    targ_folder = data_str + '_' + str(min_age) + '_' + str(max_age) + '_' + sex
     
     which_pacdat = 'pacdat_cutoffs_flat_25_excessnoise_25.pkl'
     whichEEGfileExtention = 'jpg'
@@ -1517,15 +1522,16 @@ if do_filter_figures_by_condition:
     base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
     
     # CONSTANTS 
+    if chan_in_fn:
     # FOR PAC IMAGES
-    # chan_i = 0 
-    # visit_i = 3 
-    # id_i = 4 
-
+        chan_i = 0 
+        visit_i = 3 
+        id_i = 4 
+    else:
     # FOR CHANNEL X FREQUENCY BAND SPECTAL POWER IMAGES
-    # EXAMPLE: 'eec_1_a1_10003051_cnt_256.jpg'
-    visit_i = 2 
-    id_i = 3
+        # EXAMPLE: 'eec_1_a1_10003051_cnt_256.jpg'
+        visit_i = 2 
+        id_i = 3
 
     if diag_dirs_exist:
         fl_alc = csd.get_file_list(read_dir + 'alcoholic\\', whichEEGfileExtention)
@@ -1591,19 +1597,9 @@ if do_filter_figures_by_condition:
                 shutil.copy(old_path_fn, new_path_fn + this_fn)
         
         print('There are ' + str(len(subset)) + ' with ' + str(min_age) + '-' + str(max_age) + ' age range of ' + sex + ' \n')
-        if 0:
-            subset[['age_this_visit']].plot.hist(bins=20)        
+        if 1:
+            subset[['age_this_visit']].plot.hist(bins=30) 
             
-            
-            
-    
-            
-                        
-                # old_path_fn = this_dir + '\\' + this_fn
-                
-                # new_path_fn = this_dir + '\\' + this_fn
-                # print('Copying file ' + this_fn)
-                # shutil.copy(old_path_fn, new_path_fn)
             
             
     else:
@@ -1645,9 +1641,9 @@ if do_filter_figures_by_condition:
                 if not os.path.exists(new_path_fn):
                     os.makedirs(new_path_fn) 
                 shutil.copy(old_path_fn, new_path_fn + this_fn)
-        print('There are ' + str(len(subset)) + ' with ' + str(min_age) + '-' + str(max_age) + ' age range of ' + sex + ' \n')
-        if 0:
-            subset[['age_this_visit']].plot.hist(bins=20)     
+        print('\nThere are ' + str(len(subset)) + ' with ' + str(min_age) + '-' + str(max_age) + ' age range of ' + sex + ' \n')
+        if 1:
+            subset[['age_this_visit']].plot.hist(bins=30)     
 
 
 if do_resnet_pac:
@@ -1671,18 +1667,22 @@ if do_resnet_pac:
 
     # base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\' # LAPTOP    
     # base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
-    learning_rate = 0.0025
+    learning_rate = 0.002
     each_layer_trainable = False
     pooling = 'avg'
-    pth = 'D:\\COGA_eec\\chan_hz_AUD_by_visit_all\\'
-    data_str = 'chan x hz ' # PAC
-    title_str = 'FZ Age 0-100, sex both, AUDbyVisit '
+    # targ_folder = 
+    pth = 'D:\\COGA_eec\\' + targ_folder + '\\'
+    # data_str = 'PAC@FZ' # PAC@FZ chanxHz
+    # title_str = ' Age 20-30, males, '
 
 
     img_height,img_width=224,224
-    batch_size=64
+    batch_size=32
     epochs=10
 
+    fl = csd.get_file_list(pth, whichEEGfileExtention)    
+    N_str = str(len(fl))
+    
     train_ds = tf.keras.preprocessing.image_dataset_from_directory(
       pth,
       validation_split=0.2,
@@ -1720,7 +1720,11 @@ if do_resnet_pac:
     coga_model.compile(optimizer=Adam(learning_rate=learning_rate),loss=tf.keras.losses.BinaryCrossentropy(),metrics=['accuracy'])
     history = coga_model.fit(train_ds, validation_data=validation_ds, epochs=epochs)
     
-    title_str+=', lr=' + str(learning_rate) + ' pooling=' + pooling + ' '
+    title_str+= ' (N=' + N_str + ') lr=' + str(learning_rate) + ' pool=' + pooling + ' train=' + str(each_layer_trainable)
+    fn = title_str.replace('(','')
+    fn = fn.replace(')','')
+    fn = fn.replace('=','_')
+    fn = fn.strip() + '.jpg'
     
     plotter_lib.figure(figsize=(8, 8))
     epochs_range= range(epochs)
