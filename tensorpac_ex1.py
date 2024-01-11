@@ -36,6 +36,8 @@ from tensorpac import Pac #, EventRelatedPac, PreferredPhase
 # times = arch['times']     # time vector
 
 read_dir = "D:\\COGA_eec\\"
+vmin = 0
+vmax = 5
 
 f_pha = [0.5, 12]       # frequency range phase for the coupling
 f_amp = [12, 70]      # frequency range amplitude for the coupling
@@ -133,8 +135,17 @@ for c in range(0,len(chanList_10_20)):
         # plt.show()
         
         x = xpac.mean(-1)
+        mxl = []
+        for i in range(0,len(x[0,:])): mxl.append(max(x[i,:]))
+        if max(mxl)>vmax:
+            print('Make vmax larger than ' + str(max(mxl)))
+            break
+        if min(mxl)<vmin:
+            print('Make vmin less than ' + str(min(mxl)))
+            break
+        
         # sns.heatmap(np.flip(x,0), cmap='Reds')
-        img = sns.heatmap(np.flip(x,0), cmap='Reds', xticklabels=False,yticklabels=False, cbar=False)
+        img = sns.heatmap(np.flip(x,0), cmap='Reds', xticklabels=False,yticklabels=False, cbar=False,vmin=vmin, vmax=vmax)
         fig = plt.Axes.get_figure(img)
         # FINALLY WE SAVE IT AS A JPG -    THIS WILL BE IMPORTANT FOR RESIZING 
         # THIS IMAGE FOR RESNET-50 USING PIL PACKAGE 
