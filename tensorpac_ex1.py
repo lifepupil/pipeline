@@ -36,11 +36,11 @@ from tensorpac import Pac #, EventRelatedPac, PreferredPhase
 # times = arch['times']     # time vector
 
 read_dir = "D:\\COGA_eec\\"
-vmin = 0
-vmax = 5
+vmin = -3
+vmax = 9
 
 f_pha = [0.5, 12]       # frequency range phase for the coupling
-f_amp = [12, 70]      # frequency range amplitude for the coupling
+f_amp = [8, 50]      # frequency range amplitude for the coupling
 # n_epochs = 20   # number of trials
 # n_times = 4000  # number of time points
 # sample_rate = 500       # sampling frequency
@@ -89,7 +89,7 @@ for c in range(0,len(chanList_10_20)):
             img_folder = 'alcoholic\\'
         else:
             img_folder = 'nonalcoholic\\'
-        print('Working on ' + chanList_10_20[c] + ', ' + str(i+1) + ' of ' + str(len(chpac)) + ' files' )
+        print('Working on ' + thisFileName + ', ' + str(i+1) + ' of ' + str(len(chpac)) + ' files' )
         data = np.loadtxt(thisPathFileName, delimiter=',', skiprows=1)
         
         # if 0:
@@ -110,38 +110,40 @@ for c in range(0,len(chanList_10_20)):
         #     bp = simps(psd, dx=fres)
     
         p = Pac(idpac=(pac_method, surrogate_method, norm_method), 
-                f_pha=(f_pha[0], f_pha[1], 1, .2), 
-                f_amp=(f_amp[0], f_amp[1], 5, 1),
+                f_pha=(f_pha[0], f_pha[1], 1, 0.5), 
+                f_amp=(f_amp[0], f_amp[1], 5, 2),
                 dcomplex='wavelet', width=12, verbose=None)
         
         # Now, extract all of the phases and amplitudes
         phases = p.filter(sample_rate, data, ftype='phase')
         amplitudes = p.filter(sample_rate, data, ftype='amplitude')
         xpac = p.fit(phases, amplitudes, n_perm=200, p=0.05, mcp='fdr')
-    
-        
-        # plt.figure(figsize=(16, 12))
-        # for i, k in enumerate(range(4)):
-        #     # change the pac method
-        #     p.idpac = (5, k, 4)
-        #     # compute only the pac without filtering
-        #     xpac = p.fit(phases, amplitudes, n_perm=400, p=0.05, mcp='fdr')
-        #     # plot
-        #     title = p.str_surro.replace(' (', '\n(')
-        #     plt.subplot(2, 2, k + 1)
-        #     p.comodulogram(xpac.mean(-1), title=title, cmap='Reds', vmin=0,
-        #                    fz_labels=18, fz_title=20, fz_cblabel=18)
-        # plt.tight_layout()
-        # plt.show()
-        
         x = xpac.mean(-1)
+        
+        plt.figure(figsize=(16, 12))
+        for i, k in enumerate(range(4)):
+            # change the pac method
+            p.idpac = (5, k, 4)
+            # compute only the pac without filtering
+            xpac = p.fit(phases, amplitudes, n_perm=400, p=0.05, mcp='fdr')
+            # plot
+            title = p.str_surro.replace(' (', '\n(')
+            plt.subplot(2, 2, k + 1)
+            p.comodulogram(xpac.mean(-1), title=title, cmap='Reds',
+                            fz_labels=18, fz_title=20, fz_cblabel=18)
+        plt.tight_layout()
+        plt.show()
+        
         mxl = []
+        mnl = []
         for i in range(0,len(x[0,:])): mxl.append(max(x[i,:]))
+        for i in range(0,len(x[0,:])): mnl.append(min(x[i,:]))
+        print('\n' + str(min(mnl)) + ' to ' + str(max(mxl)) + '\n')
         if max(mxl)>vmax:
             print('Make vmax larger than ' + str(max(mxl)))
             break
-        if min(mxl)<vmin:
-            print('Make vmin less than ' + str(min(mxl)))
+        if min(mnl)<vmin:
+            print('Make vmin less than ' + str(min(mnl)))
             break
         
         # sns.heatmap(np.flip(x,0), cmap='Reds')
@@ -149,8 +151,8 @@ for c in range(0,len(chanList_10_20)):
         fig = plt.Axes.get_figure(img)
         # FINALLY WE SAVE IT AS A JPG -    THIS WILL BE IMPORTANT FOR RESIZING 
         # THIS IMAGE FOR RESNET-50 USING PIL PACKAGE 
-        fig.savefig(read_dir + 'pac_figures\\' + img_folder + thisFileName + '.jpg', bbox_inches='tight')
-        fig.close()
+        fig.savefig(read_dir + 'pac_figures_new\\' + img_folder + thisFileName + '.jpg', bbox_inches='tight')
+        plt.close(fig)
         # title = p.str_surro.replace(' (', '\n(')
         # ch = thisFileName.split('_')[0]
         # vst = thisFileName.split('_')[3]
