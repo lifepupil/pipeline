@@ -919,15 +919,15 @@ if do_resnet_chanxfreq:
     
     coga_model = Sequential()
 
-    pretrained_model_for_demo= tf.keras.applications.ResNet50(include_top=False,
+    rn50= tf.keras.applications.ResNet50(include_top=False,
         input_shape=(img_height, img_width,3),
         pooling='avg',
         classes=2,
         weights=None)
     
-    for each_layer in pretrained_model_for_demo.layers:
+    for each_layer in rn50.layers:
         each_layer.trainable=True
-    coga_model.add(pretrained_model_for_demo)
+    coga_model.add(rn50)
         
     coga_model.add(Flatten())
     coga_model.add(Dense(512, activation='relu'))
@@ -1504,23 +1504,25 @@ if do_filter_figures_by_condition:
 # MOVE PAC IMAGE FILES THAT MEET CONDITIONS
     import shutil
 
-    title_str = 'Age 10-20 females'    
+    source_folder = 'pac_figures_all' # pac_figures_all chan_hz
     data_str = 'PAC' # PAC chanxHz
-    min_age = 10
-    max_age = 20
+    whichEEGfileExtention = 'jpg'
+    min_age = 0 
+    max_age = 100    
     sex = 'F' # F M or both 
+    do_copy = True
 
     diag_dirs_exist = False # HAVE THE IMAGES ALREADY BEEN SORTED INTO ALCOHOLIC AND NONALCHOLIC?
     chan_in_fn = True # IS THERE CHANNEL INFORMATION IN THE FILENAME?
     
-    source_folder = 'pac_figures_all'
-    targ_folder = data_str + '_' + str(min_age) + '_' + str(max_age) + '_' + sex
     
     which_pacdat = 'pacdat_cutoffs_flat_25_excessnoise_25.pkl'
-    whichEEGfileExtention = 'jpg'
     read_dir = 'D:\\COGA_eec\\' + source_folder + '\\'  #  BIOWIZARD
     base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
     
+    title_str = 'Age ' + str(min_age) + '-' + str(max_age)  + ' ' + sex    
+    targ_folder = data_str + '_' + str(min_age) + '_' + str(max_age) + '_' + sex
+
     # CONSTANTS 
     if chan_in_fn:
     # FOR PAC IMAGES
@@ -1562,6 +1564,9 @@ if do_filter_figures_by_condition:
     pacdat = pd.read_pickle(base_dir + which_pacdat)
         
     # del pacdat
+
+    # diags = [ int(i) for i in subset[['AUD_this_visit']].values[:,0] ]
+    # alc = str(round((sum(diags)/len(diags))*100,1))
     
     if chan_in_fn:
         if not sex=='both':    
@@ -1591,12 +1596,15 @@ if do_filter_figures_by_condition:
                 new_path_fn = this_dir
                 new_path_fn = new_path_fn.replace(source_folder, targ_folder + '\\' + diag_folder)
                 
-                print('Copying file ' + this_fn)
                 if not os.path.exists(new_path_fn):
                     os.makedirs(new_path_fn) 
-                shutil.copy(old_path_fn, new_path_fn + this_fn)
+                
+                if do_copy:
+                    shutil.copy(old_path_fn, new_path_fn + this_fn)
+                    print('Copying file ' + this_fn)
         
-        print('There are ' + str(len(subset)) + ' with ' + str(min_age) + '-' + str(max_age) + ' age range of ' + sex + ' \n')
+        print('\n'.replace('\\n','\n'))
+        print('There are ' + str(len(subset)) + ' with ' + str(min_age) + '-' + str(max_age) + ' age range of ' + sex)
         if 1:
             subset[['age_this_visit']].plot.hist(bins=30) 
             
@@ -1637,15 +1645,27 @@ if do_filter_figures_by_condition:
                 new_path_fn = this_dir
                 new_path_fn = new_path_fn.replace(source_folder, targ_folder + '\\' + diag_folder)
                 
-                print('Copying file ' + this_fn)
                 if not os.path.exists(new_path_fn):
                     os.makedirs(new_path_fn) 
-                shutil.copy(old_path_fn, new_path_fn + this_fn)
-        print('\nThere are ' + str(len(subset)) + ' with ' + str(min_age) + '-' + str(max_age) + ' age range of ' + sex + ' \n')
+                if do_copy:
+                    shutil.copy(old_path_fn, new_path_fn + this_fn)
+                    print('Copying file ' + this_fn)
+
+        print('\n'.replace('\\n','\n'))
+        print('There are ' + str(len(subset)) + ' with ' + str(min_age) + '-' + str(max_age) + ' age range of ' + sex)
         if 1:
             subset[['age_this_visit']].plot.hist(bins=30)     
-
-
+    
+    
+    
+    # HOW MANY IN SAMPLE ARE FROM ALCOHOLICS?
+    diags = [ int(i) for i in subset[['AUD_this_visit']].values[:,0] ]
+    alc = str(round((sum(diags)/len(diags))*100,1))
+    # alc_not = str(round(((len(diags) - sum(diags))/len(diags))*100,1))
+    # print('\n'.replace('\\n','\n'))
+    print(alc + '% of sample are AUD\n')
+        
+        
 if do_resnet_pac:
     # after unimpressive training using ImageNet,
     # tried setting weights to None,  
@@ -1659,6 +1679,7 @@ if do_resnet_pac:
     import numpy as np
     # import PIL as image_lib
     import tensorflow as tf
+    import tensorflow.keras as K
     from tensorflow.keras.layers import Flatten
     from keras.layers.core import Dense
     from tensorflow.keras.models import Sequential
@@ -1670,10 +1691,16 @@ if do_resnet_pac:
     learning_rate = 0.002
     each_layer_trainable = False
     pooling = 'avg'
-    # targ_folder = 
-    pth = 'D:\\COGA_eec\\' + targ_folder + '\\'
+    base_dir = 'D:\\COGA_eec\\'
+    whichEEGfileExtention = 'jpg'
+
+    # targ_folder = 'PAC_10_20_both'
     # data_str = 'PAC@FZ' # PAC@FZ chanxHz
     # title_str = ' Age 20-30, males, '
+    
+    # title_str = 'Age 10-20 both sexes '    
+    # data_str = 'PAC' # PAC chanxHz
+    pth = base_dir + targ_folder + '\\'
 
 
     img_height,img_width=224,224
@@ -1681,11 +1708,13 @@ if do_resnet_pac:
     epochs=10
 
     fl = csd.get_file_list(pth, whichEEGfileExtention)    
+    fl_alc = csd.get_file_list(pth + 'alcoholic\\', whichEEGfileExtention)
+    alc = str(round((len(fl_alc)/len(fl))*100,1))
     N_str = str(len(fl))
     
     train_ds = tf.keras.preprocessing.image_dataset_from_directory(
       pth,
-      validation_split=0.2,
+      validation_split=0.3,
       subset="training",
       seed=999,
       label_mode='binary',
@@ -1694,7 +1723,7 @@ if do_resnet_pac:
     
     validation_ds = tf.keras.preprocessing.image_dataset_from_directory(
         pth,
-        validation_split=0.2,
+        validation_split=0.3,
         subset="validation",
         seed=999,
         label_mode='binary',
@@ -1703,24 +1732,52 @@ if do_resnet_pac:
     
     coga_model = Sequential()
 
-    pretrained_model_for_demo= tf.keras.applications.ResNet50(include_top=False,
+    rn50= tf.keras.applications.ResNet50(include_top=False,
         input_shape=(img_height, img_width,3),
         pooling=pooling,
         classes=2,
         weights='imagenet') # imagenet or None
     
-    for each_layer in pretrained_model_for_demo.layers:
-        each_layer.trainable=each_layer_trainable
-    coga_model.add(pretrained_model_for_demo)
-        
-    coga_model.add(Flatten())
-    coga_model.add(Dense(512, activation='relu'))
-    coga_model.add(Dense(1, activation='sigmoid'))
+    for each_layer in rn50.layers:
+        each_layer.trainable=False
+                
+    coga_model.add(rn50)
+    coga_model.layers[0].trainable=False
+    # coga_model.add(Flatten())
+    # coga_model.add(Dense(512, activation='relu'))
+    # coga_model.add(Dense(1, activation='sigmoid'))
 
-    coga_model.compile(optimizer=Adam(learning_rate=learning_rate),loss=tf.keras.losses.BinaryCrossentropy(),metrics=['accuracy'])
-    history = coga_model.fit(train_ds, validation_data=validation_ds, epochs=epochs)
+    coga_model.add(K.layers.Flatten())
+    coga_model.add(K.layers.BatchNormalization())
+    coga_model.add(K.layers.Dense(256, activation='relu'))
+    coga_model.add(K.layers.Dropout(0.5))
+    coga_model.add(K.layers.BatchNormalization())
+    coga_model.add(K.layers.Dense(128, activation='relu'))
+    coga_model.add(K.layers.Dropout(0.5))
+    coga_model.add(K.layers.BatchNormalization())
+    coga_model.add(K.layers.Dense(64, activation='relu'))
+    coga_model.add(K.layers.Dropout(0.5))
+    coga_model.add(K.layers.BatchNormalization())
+    # coga_model.add(K.layers.Dense(10, activation='softmax'))
+    coga_model.add(Dense(1, activation='sigmoid'))
+   
+    # CHECK LAYERS
+    for i, layer in enumerate(coga_model.layers): print(i, layer.name, "-", layer.trainable)
+
+    coga_model.compile(optimizer=Adam(learning_rate=learning_rate),
+                       loss=tf.keras.losses.BinaryCrossentropy(),
+                       metrics=['accuracy'])
     
-    title_str+= ' (N=' + N_str + ') lr=' + str(learning_rate) + ' pool=' + pooling + ' train=' + str(each_layer_trainable)
+    history = coga_model.fit(train_ds, 
+                             validation_data=validation_ds, 
+                             epochs=epochs,
+                             batch_size=batch_size,
+                             verbose=1)
+    coga_model.summary()
+
+    
+    
+    title_str+= ' (N=' + N_str + ', alc=' + alc + '%) lr=' + str(learning_rate) + ' pool=' + pooling + ' train=' + str(each_layer_trainable)
     fn = title_str.replace('(','')
     fn = fn.replace(')','')
     fn = fn.replace('=','_')
@@ -1750,4 +1807,11 @@ if do_resnet_pac:
 
 
 
-            
+if 1:
+    import scipy.stats as ss
+    
+    
+    fa = pacdat[(pacdat.AUD_this_visit==True) & (pacdat.sex=='F')].age_this_visit
+    fna = pacdat[(pacdat.AUD_this_visit==False) & (pacdat.sex=='F')].age_this_visit
+        
+    ss.ttest_ind(fa,fna, equal_var=False)

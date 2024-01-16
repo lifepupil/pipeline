@@ -37,9 +37,9 @@ from tensorpac import Pac #, EventRelatedPac, PreferredPhase
 
 read_dir = "D:\\COGA_eec\\"
 vmin = -3
-vmax = 9
+vmax = 7
 
-f_pha = [0.5, 12]       # frequency range phase for the coupling
+f_pha = [0, 13]       # frequency range phase for the coupling
 f_amp = [8, 50]      # frequency range amplitude for the coupling
 # n_epochs = 20   # number of trials
 # n_times = 4000  # number of time points
@@ -76,6 +76,9 @@ norm_method = 4 # normalization method for correction - z-scores
 # FOR ALL POSSIBLE SETTINGS, SEE:
 #  https://etiennecmb.github.io/tensorpac/generated/tensorpac.Pac.html#tensorpac.Pac
 
+mn = []
+mx = []
+
 pacdat = pd.read_csv(read_dir + 'pacdat.csv')
 
 for c in range(0,len(chanList_10_20)):
@@ -110,9 +113,9 @@ for c in range(0,len(chanList_10_20)):
         #     bp = simps(psd, dx=fres)
     
         p = Pac(idpac=(pac_method, surrogate_method, norm_method), 
-                f_pha=(f_pha[0], f_pha[1], 1, 0.5), 
-                f_amp=(f_amp[0], f_amp[1], 5, 2),
-                dcomplex='wavelet', width=12, verbose=None)
+                f_pha=(f_pha[0], f_pha[1], 1, 1), 
+                f_amp=(f_amp[0], f_amp[1], 2, 2),
+                dcomplex='wavelet', width=7, verbose=None)
         
         # Now, extract all of the phases and amplitudes
         phases = p.filter(sample_rate, data, ftype='phase')
@@ -120,34 +123,36 @@ for c in range(0,len(chanList_10_20)):
         xpac = p.fit(phases, amplitudes, n_perm=200, p=0.05, mcp='fdr')
         x = xpac.mean(-1)
         
-        plt.figure(figsize=(16, 12))
-        for i, k in enumerate(range(4)):
-            # change the pac method
-            p.idpac = (5, k, 4)
-            # compute only the pac without filtering
-            xpac = p.fit(phases, amplitudes, n_perm=400, p=0.05, mcp='fdr')
-            # plot
-            title = p.str_surro.replace(' (', '\n(')
-            plt.subplot(2, 2, k + 1)
-            p.comodulogram(xpac.mean(-1), title=title, cmap='Reds',
-                            fz_labels=18, fz_title=20, fz_cblabel=18)
-        plt.tight_layout()
-        plt.show()
+        mn.append(x.min())
+        mx.append(x.max())
+        print(str(mn[-1]) + ' to ' + str(mx[-1]) + '\n')
+        # if mx[-1]>vmax:
+        #     print('Make vmax larger than ' + str(mx[-1]))
+        #     break
+        # if mn[-1]<vmin:
+        #     print('Make vmin less than ' + str(mn[-1]))
+        #     break
         
-        mxl = []
-        mnl = []
-        for i in range(0,len(x[0,:])): mxl.append(max(x[i,:]))
-        for i in range(0,len(x[0,:])): mnl.append(min(x[i,:]))
-        print('\n' + str(min(mnl)) + ' to ' + str(max(mxl)) + '\n')
-        if max(mxl)>vmax:
-            print('Make vmax larger than ' + str(max(mxl)))
-            break
-        if min(mnl)<vmin:
-            print('Make vmin less than ' + str(min(mnl)))
-            break
+        
+        # plt.figure(figsize=(16, 12))
+        # for i, k in enumerate(range(4)):
+        #     # change the pac method
+        #     p.idpac = (5, k, 4)
+        #     # compute only the pac without filtering
+        #     xpac = p.fit(phases, amplitudes, n_perm=200, p=0.05, mcp='fdr')
+        #     # plot
+        #     title = p.str_surro.replace(' (', '\n(')
+        #     plt.subplot(2, 2, k + 1)
+        #     p.comodulogram(xpac.mean(-1), title=title, cmap='Reds',
+        #                     fz_labels=18, fz_title=20, fz_cblabel=18)
+        # plt.tight_layout()
+        # plt.show()
+        
+
         
         # sns.heatmap(np.flip(x,0), cmap='Reds')
-        img = sns.heatmap(np.flip(x,0), cmap='Reds', xticklabels=False,yticklabels=False, cbar=False,vmin=vmin, vmax=vmax)
+        img = sns.heatmap(np.flip(x,0), cmap='Reds',vmin=vmin, vmax=vmax, xticklabels=False,yticklabels=False, cbar=False)
+        # img = sns.heatmap(np.flip(x,0), cmap='Reds',vmin=vmin, vmax=vmax, xticklabels=True,yticklabels=True, cbar=True)
         fig = plt.Axes.get_figure(img)
         # FINALLY WE SAVE IT AS A JPG -    THIS WILL BE IMPORTANT FOR RESIZING 
         # THIS IMAGE FOR RESNET-50 USING PIL PACKAGE 
