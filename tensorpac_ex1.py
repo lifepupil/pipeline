@@ -40,7 +40,7 @@ vmin = -3
 vmax = 7
 
 f_pha = [0, 13]       # frequency range phase for the coupling
-f_amp = [8, 50]      # frequency range amplitude for the coupling
+f_amp = [4, 50]      # frequency range amplitude for the coupling
 # n_epochs = 20   # number of trials
 # n_times = 4000  # number of time points
 # sample_rate = 500       # sampling frequency
@@ -95,75 +95,66 @@ for c in range(0,len(chanList_10_20)):
         print('Working on ' + thisFileName + ', ' + str(i+1) + ' of ' + str(len(chpac)) + ' files' )
         data = np.loadtxt(thisPathFileName, delimiter=',', skiprows=1)
         
-        # if 0:
-        #     band_rng = [0.5, 4]
+        time_intervals = list(range(0,len(data),sample_rate*60))
         
-        #     # GENERATES FIGURE OF EEG SIGNAL
-        #     time = np.arange(data.size)/sample_rate
-        #     plt.plot(time, data, lw=1.5,color='k')
-        #     plt.show()
-        #     # GENERATES PSD FIGURE
-        #     win_length = (2/band_rng[0])*sample_rate
-        #     freqs, psd = welch(data , sample_rate, nperseg=win_length)
-        #     plt.plot(freqs[freqs<80],psd[freqs<80])
-        #     plt.show()
-        
-        #     fres = band_rng[1] - band_rng[0]
-        #     ib = np.logical_and(freqs>=band_rng[0], freqs<band_rng[1])
-        #     bp = simps(psd, dx=fres)
+        for t in range(0,len(time_intervals)-1): 
+            start = time_intervals[t]
+            end = time_intervals[t+1]
+            segment = data[start:end]
+            
     
-        p = Pac(idpac=(pac_method, surrogate_method, norm_method), 
-                f_pha=(f_pha[0], f_pha[1], 1, 1), 
-                f_amp=(f_amp[0], f_amp[1], 2, 2),
-                dcomplex='wavelet', width=7, verbose=None)
-        
-        # Now, extract all of the phases and amplitudes
-        phases = p.filter(sample_rate, data, ftype='phase')
-        amplitudes = p.filter(sample_rate, data, ftype='amplitude')
-        xpac = p.fit(phases, amplitudes, n_perm=200, p=0.05, mcp='fdr')
-        x = xpac.mean(-1)
-        
-        mn.append(x.min())
-        mx.append(x.max())
-        print(str(mn[-1]) + ' to ' + str(mx[-1]) + '\n')
-        # if mx[-1]>vmax:
-        #     print('Make vmax larger than ' + str(mx[-1]))
-        #     break
-        # if mn[-1]<vmin:
-        #     print('Make vmin less than ' + str(mn[-1]))
-        #     break
-        
-        
-        # plt.figure(figsize=(16, 12))
-        # for i, k in enumerate(range(4)):
-        #     # change the pac method
-        #     p.idpac = (5, k, 4)
-        #     # compute only the pac without filtering
-        #     xpac = p.fit(phases, amplitudes, n_perm=200, p=0.05, mcp='fdr')
-        #     # plot
-        #     title = p.str_surro.replace(' (', '\n(')
-        #     plt.subplot(2, 2, k + 1)
-        #     p.comodulogram(xpac.mean(-1), title=title, cmap='Reds',
-        #                     fz_labels=18, fz_title=20, fz_cblabel=18)
-        # plt.tight_layout()
-        # plt.show()
-        
-
-        
-        # sns.heatmap(np.flip(x,0), cmap='Reds')
-        img = sns.heatmap(np.flip(x,0), cmap='Reds',vmin=vmin, vmax=vmax, xticklabels=False,yticklabels=False, cbar=False)
-        # img = sns.heatmap(np.flip(x,0), cmap='Reds',vmin=vmin, vmax=vmax, xticklabels=True,yticklabels=True, cbar=True)
-        fig = plt.Axes.get_figure(img)
-        # FINALLY WE SAVE IT AS A JPG -    THIS WILL BE IMPORTANT FOR RESIZING 
-        # THIS IMAGE FOR RESNET-50 USING PIL PACKAGE 
-        fig.savefig(read_dir + 'pac_figures_new\\' + img_folder + thisFileName + '.jpg', bbox_inches='tight')
-        plt.close(fig)
-        # title = p.str_surro.replace(' (', '\n(')
-        # ch = thisFileName.split('_')[0]
-        # vst = thisFileName.split('_')[3]
-        # sbj = thisFileName.split('_')[4]
-        # aud = img_folder.split('\\')[0]
-        # title = ch + ' from ' + sbj + ', visit ' + vst + '\n' + aud
-        # p.comodulogram(xpac.mean(-1), title=title, cmap='Reds', vmin=0, fz_labels=14, fz_title=18, fz_cblabel=14)
-        # # p.savefig(read_dir + 'pac_figures\\' + thisFileName + '.jpg')
-        # del p
+            p = Pac(idpac=(pac_method, surrogate_method, norm_method), 
+                    f_pha=(f_pha[0], f_pha[1], 1, 1), 
+                    f_amp=(f_amp[0], f_amp[1], 2, 2),
+                    dcomplex='wavelet', width=7, verbose=None)
+            
+            # Now, extract all of the phases and amplitudes
+            phases = p.filter(sample_rate, segment, ftype='phase')
+            amplitudes = p.filter(sample_rate, segment, ftype='amplitude')
+            xpac = p.fit(phases, amplitudes, n_perm=200, p=0.05, mcp='fdr')
+            x = xpac.mean(-1)
+            
+            mn.append(x.min())
+            mx.append(x.max())
+            print(str(mn[-1]) + ' to ' + str(mx[-1]) + '\n')
+            # if mx[-1]>vmax:
+            #     print('Make vmax larger than ' + str(mx[-1]))
+            #     break
+            # if mn[-1]<vmin:
+            #     print('Make vmin less than ' + str(mn[-1]))
+            #     break
+            
+            
+            # plt.figure(figsize=(16, 12))
+            # for i, k in enumerate(range(4)):
+            #     # change the pac method
+            #     p.idpac = (5, k, 4)
+            #     # compute only the pac without filtering
+            #     xpac = p.fit(phases, amplitudes, n_perm=200, p=0.05, mcp='fdr')
+            #     # plot
+            #     title = p.str_surro.replace(' (', '\n(')
+            #     plt.subplot(2, 2, k + 1)
+            #     p.comodulogram(xpac.mean(-1), title=title, cmap='Reds',
+            #                     fz_labels=18, fz_title=20, fz_cblabel=18)
+            # plt.tight_layout()
+            # plt.show()
+            
+    
+            
+            # sns.heatmap(np.flip(x,0), cmap='Reds')
+            img = sns.heatmap(np.flip(x,0), cmap='Reds',vmin=vmin, vmax=vmax, xticklabels=False,yticklabels=False, cbar=False)
+            # img = sns.heatmap(np.flip(x,0), cmap='Reds',vmin=vmin, vmax=vmax, xticklabels=True,yticklabels=True, cbar=True)
+            fig = plt.Axes.get_figure(img)
+            # FINALLY WE SAVE IT AS A JPG -    THIS WILL BE IMPORTANT FOR RESIZING 
+            # THIS IMAGE FOR RESNET-50 USING PIL PACKAGE 
+            fig.savefig(read_dir + 'pac_figures_new\\' + img_folder + thisFileName + '_' + str(t) + '.jpg', bbox_inches='tight')
+            plt.close(fig)
+            # title = p.str_surro.replace(' (', '\n(')
+            # ch = thisFileName.split('_')[0]
+            # vst = thisFileName.split('_')[3]
+            # sbj = thisFileName.split('_')[4]
+            # aud = img_folder.split('\\')[0]
+            # title = ch + ' from ' + sbj + ', visit ' + vst + '\n' + aud
+            # p.comodulogram(xpac.mean(-1), title=title, cmap='Reds', vmin=0, fz_labels=14, fz_title=18, fz_cblabel=14)
+            # # p.savefig(read_dir + 'pac_figures\\' + thisFileName + '.jpg')
+            # del p
