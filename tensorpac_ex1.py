@@ -4,48 +4,32 @@ Created on Thu Jun 15 13:32:42 2023
 
 @author: CRichard
 """
-
+import os 
 import matplotlib.pyplot as plt
-
-# import os
-# import urllib
-
 import numpy as np
 import pandas as pd
 import seaborn as sns
-
-# from scipy.io import loadmat
-# from scipy.signal import welch
-# from scipy.integrate import simps
-
 from tensorpac import Pac #, EventRelatedPac, PreferredPhase
 # from tensorpac.utils import PeakLockedTF, PSD, ITC, BinAmplitude
 # from tensorpac.signals import pac_signals_wavelet
 
-# import mne
+epoch_dur = 30 # how many seconds in each epoch
+pac_method = 5 # Phase-Locking Value=5, modulation index=2
+surrogate_method = 2 # METHOD FOR COMPUTING SURROGATES - Swap amplitude time blocks
+norm_method = 4 # normalization method for correction - z-scores
+# FOR ALL POSSIBLE SETTINGS, SEE:
+#  https://etiennecmb.github.io/tensorpac/generated/tensorpac.Pac.html#tensorpac.Pac
 
-# filename = os.path.join(os.getcwd(), 'seeg_data_pac.npz')
-# if not os.path.isfile(filename):
-#     print('Downloading the data')
-#     url = "https://www.dropbox.com/s/dn51xh7nyyttf33/seeg_data_pac.npz?dl=1"
-#     urllib.request.urlretrieve(url, filename=filename)
-
-# arch = np.load(filename)
-# data = arch['data']       # data of a single sEEG contact
-# sf = float(arch['sf'])    # sampling frequency
-# times = arch['times']     # time vector
-
-read_dir = "D:\\COGA_eec\\"
+# read_dir = "D:\\COGA_eec\\"
+# write_dir = "D:\\COGA_eec\\"
+read_dir = "/$TMPDIR/input/"
+write_dir = "/$TMPDIR/results/"
+which_pacdat = 'pacdat_cutoffs_flat_25_excessnoise_25.pkl'
 vmin = -3
 vmax = 7
 
 f_pha = [0, 13]       # frequency range phase for the coupling
 f_amp = [4, 50]      # frequency range amplitude for the coupling
-# n_epochs = 20   # number of trials
-# n_times = 4000  # number of time points
-# sample_rate = 500       # sampling frequency
-# data, time = pac_signals_wavelet(sf=sample_rate, f_pha=f_pha, f_amp=f_amp, noise=3.,
-#                                  n_epochs=n_epochs, n_times=n_times)
 
 # 10-20 CHANNEL LIST 
 chanList_10_20 = [
@@ -70,32 +54,33 @@ chanList_10_20 = [
         'FP1',
         'FP2']
 
-pac_method = 5 # USES Phase-Locking Value (PLV) TO GENERATE PAC VALUES
-surrogate_method = 2 # METHOD FOR COMPUTING SURROGATES - Swap amplitude time blocks
-norm_method = 4 # normalization method for correction - z-scores
-# FOR ALL POSSIBLE SETTINGS, SEE:
-#  https://etiennecmb.github.io/tensorpac/generated/tensorpac.Pac.html#tensorpac.Pac
 
 mn = []
 mx = []
 
-pacdat = pd.read_csv(read_dir + 'pacdat.csv')
+# pacdat = pd.read_csv(read_dir + which_pacdat)
+pacdat = pd.read_pickle(read_dir + which_pacdat)
 
-for c in range(0,len(chanList_10_20)):
-    chpac = pacdat[pacdat.channel==chanList_10_20[c]]
+# for c in range(0,len(chanList_10_20)):
+for c in range(0,1):
     
-    for i in range(0,len(chpac)):
+    chpac = pacdat[pacdat.channel==chanList_10_20[c]]
+    # for i in range(0,len(chpac)):
+    for i in range(0,1):
         sample_rate = int(chpac.iloc[i].eeg_file_name.split('_')[-1])
         thisFileName = chpac.iloc[i].eeg_file_name    
-        thisPathFileName = read_dir + 'cleaned_data\\' + thisFileName + '.csv'
+        # thisPathFileName = read_dir + 'cleaned_data\\' + thisFileName + '.csv'
+        thisPathFileName = read_dir + 'cleaned_data/' + thisFileName + '.csv'
         if chpac.iloc[i].alcoholic:
-            img_folder = 'alcoholic\\'
+            # dx_folder = 'alcoholic\\'
+            dx_folder = 'alcoholic/'
         else:
-            img_folder = 'nonalcoholic\\'
+            # dx_folder = 'nonalcoholic\\'
+            dx_folder = 'nonalcoholic/'
         print('Working on ' + thisFileName + ', ' + str(i+1) + ' of ' + str(len(chpac)) + ' files' )
         data = np.loadtxt(thisPathFileName, delimiter=',', skiprows=1)
         
-        time_intervals = list(range(0,len(data),sample_rate*60))
+        time_intervals = list(range(0,len(data),sample_rate*epoch_dur))
         
         for t in range(0,len(time_intervals)-1): 
             start = time_intervals[t]
@@ -104,8 +89,8 @@ for c in range(0,len(chanList_10_20)):
             
     
             p = Pac(idpac=(pac_method, surrogate_method, norm_method), 
-                    f_pha=(f_pha[0], f_pha[1], 1, 1), 
-                    f_amp=(f_amp[0], f_amp[1], 2, 2),
+                    f_pha=(f_pha[0], f_pha[1], 1, 0.1), 
+                    f_amp=(f_amp[0], f_amp[1], 1, 0.1),
                     dcomplex='wavelet', width=7, verbose=None)
             
             # Now, extract all of the phases and amplitudes
@@ -117,29 +102,7 @@ for c in range(0,len(chanList_10_20)):
             mn.append(x.min())
             mx.append(x.max())
             print(str(mn[-1]) + ' to ' + str(mx[-1]) + '\n')
-            # if mx[-1]>vmax:
-            #     print('Make vmax larger than ' + str(mx[-1]))
-            #     break
-            # if mn[-1]<vmin:
-            #     print('Make vmin less than ' + str(mn[-1]))
-            #     break
-            
-            
-            # plt.figure(figsize=(16, 12))
-            # for i, k in enumerate(range(4)):
-            #     # change the pac method
-            #     p.idpac = (5, k, 4)
-            #     # compute only the pac without filtering
-            #     xpac = p.fit(phases, amplitudes, n_perm=200, p=0.05, mcp='fdr')
-            #     # plot
-            #     title = p.str_surro.replace(' (', '\n(')
-            #     plt.subplot(2, 2, k + 1)
-            #     p.comodulogram(xpac.mean(-1), title=title, cmap='Reds',
-            #                     fz_labels=18, fz_title=20, fz_cblabel=18)
-            # plt.tight_layout()
-            # plt.show()
-            
-    
+          
             
             # sns.heatmap(np.flip(x,0), cmap='Reds')
             img = sns.heatmap(np.flip(x,0), cmap='Reds',vmin=vmin, vmax=vmax, xticklabels=False,yticklabels=False, cbar=False)
@@ -147,14 +110,15 @@ for c in range(0,len(chanList_10_20)):
             fig = plt.Axes.get_figure(img)
             # FINALLY WE SAVE IT AS A JPG -    THIS WILL BE IMPORTANT FOR RESIZING 
             # THIS IMAGE FOR RESNET-50 USING PIL PACKAGE 
-            fig.savefig(read_dir + 'pac_figures_new\\' + img_folder + thisFileName + '_' + str(t) + '.jpg', bbox_inches='tight')
+            # fig.savefig(write_dir + 'pac_figures_segmented\\' + dx_folder + thisFileName + '_t' + str(t) + '.jpg', bbox_inches='tight')
+            fig.savefig(write_dir + 'pac_figures_segmented/' + dx_folder + thisFileName + '_t' + str(t) + '.jpg', bbox_inches='tight')
             plt.close(fig)
             # title = p.str_surro.replace(' (', '\n(')
             # ch = thisFileName.split('_')[0]
             # vst = thisFileName.split('_')[3]
             # sbj = thisFileName.split('_')[4]
-            # aud = img_folder.split('\\')[0]
+            # aud = dx_folder.split('\\')[0]
             # title = ch + ' from ' + sbj + ', visit ' + vst + '\n' + aud
             # p.comodulogram(xpac.mean(-1), title=title, cmap='Reds', vmin=0, fz_labels=14, fz_title=18, fz_cblabel=14)
-            # # p.savefig(read_dir + 'pac_figures\\' + thisFileName + '.jpg')
+            # # p.savefig(write_dir + 'pac_figures\\' + thisFileName + '.jpg')
             # del p
