@@ -22,10 +22,10 @@ norm_method = 4 # normalization method for correction - z-scores
 # FOR ALL POSSIBLE SETTINGS, SEE:
 #  https://etiennecmb.github.io/tensorpac/generated/tensorpac.Pac.html#tensorpac.Pac
 
-read_dir = "D:\\COGA_eec\\"
-write_dir = "D:\\COGA_eec\\"
-# read_dir = "/$TMPDIR/input/"
-# write_dir = "/$TMPDIR/results/"
+# read_dir = "D:\\COGA_eec\\"
+# write_dir = "D:\\COGA_eec\\"
+read_dir = "/$TMPDIR/input/"
+write_dir = "/$TMPDIR/results/"
 which_pacdat = 'pacdat_cutoffs_flat_25_excessnoise_25.pkl'
 vmin = -3
 vmax = 7
@@ -71,14 +71,14 @@ for c in range(0,1):
     for i in range(0,1):
         sample_rate = int(chpac.iloc[i].eeg_file_name.split('_')[-1])
         thisFileName = chpac.iloc[i].eeg_file_name    
-        thisPathFileName = read_dir + 'cleaned_data\\' + thisFileName + '.csv'
-        # thisPathFileName = read_dir + 'cleaned_data/' + thisFileName + '.csv'
+        # thisPathFileName = read_dir + 'cleaned_data\\' + thisFileName + '.csv'
+        thisPathFileName = read_dir + 'cleaned_data/' + thisFileName + '.csv'
         if chpac.iloc[i].alcoholic:
-            dx_folder = 'alcoholic\\'
-            # dx_folder = 'alcoholic/'
+            # dx_folder = 'alcoholic\\'
+            dx_folder = 'alcoholic/'
         else:
-            dx_folder = 'nonalcoholic\\'
-            # dx_folder = 'nonalcoholic/'
+            # dx_folder = 'nonalcoholic\\'
+            dx_folder = 'nonalcoholic/'
         print('Working on ' + thisFileName + ', ' + str(i+1) + ' of ' + str(len(chpac)) + ' files' )
         data = np.loadtxt(thisPathFileName, delimiter=',', skiprows=1)
         
@@ -112,8 +112,8 @@ for c in range(0,1):
             fig = plt.Axes.get_figure(img)
             # FINALLY WE SAVE IT AS A JPG -    THIS WILL BE IMPORTANT FOR RESIZING 
             # THIS IMAGE FOR RESNET-50 USING PIL PACKAGE 
-            fig.savefig(wridir + 'pac_figures_segmented\\' + dx_folder + thisFileName + '_t' + str(t) + '.jpg', bbox_inches='tight')
-            # fig.savefig(write_dir + 'pac_figures_segmented/' + dx_folder + thisFileName + '_t' + str(t) + '.jpg', bbox_inches='tight')
+            # fig.savefig(wridir + 'pac_figures_segmented\\' + dx_folder + thisFileName + '_t' + str(t) + '.jpg', bbox_inches='tight')
+            fig.savefig(write_dir + 'pac_figures_segmented/' + dx_folder + thisFileName + '_t' + str(t) + '.jpg', bbox_inches='tight')
             plt.close(fig)
             
             
