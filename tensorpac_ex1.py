@@ -20,12 +20,12 @@ norm_method = 4 # normalization method for correction - z-scores
 # FOR ALL POSSIBLE SETTINGS, SEE:
 #  https://etiennecmb.github.io/tensorpac/generated/tensorpac.Pac.html#tensorpac.Pac
 
-read_dir = "D:\\COGA_eec\\"
-write_dir = "D:\\COGA_eec\\"
+# read_dir = "D:\\COGA_eec\\"
+# write_dir = "D:\\COGA_eec\\"
 # read_dir = "/$TMPDIR/input/"
 # write_dir = "/$TMPDIR/results/"
-# read_dir = os.environ['TMPDIR'] + '/input/'
-# write_dir = os.environ['TMPDIR'] + '/results/'
+read_dir = os.environ['TMPDIR'] + '/input/'
+write_dir = os.environ['TMPDIR'] + '/results/'
 which_pacdat = 'pacdat_cutoffs_flat_25_excessnoise_25.pkl'
 vmin = -3
 vmax = 7
