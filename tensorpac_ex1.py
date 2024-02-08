@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-#!/ddn/crichard/anaconda3/envs/pac/bin/python3
-
 """
 Created on Thu Jun 15 13:32:42 2023
 
@@ -24,8 +22,10 @@ norm_method = 4 # normalization method for correction - z-scores
 
 # read_dir = "D:\\COGA_eec\\"
 # write_dir = "D:\\COGA_eec\\"
-read_dir = "/$TMPDIR/input/"
-write_dir = "/$TMPDIR/results/"
+# read_dir = "/$TMPDIR/input/"
+# write_dir = "/$TMPDIR/results/"
+read_dir = os.environ['TMPDIR'] + '/input'
+write_dir = os.environ['TMPDIR'] + '/results'
 which_pacdat = 'pacdat_cutoffs_flat_25_excessnoise_25.pkl'
 vmin = -3
 vmax = 7
