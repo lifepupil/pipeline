@@ -63,14 +63,14 @@ mx = []
 # pacdat = pd.read_csv(read_dir + which_pacdat)
 pacdat = pd.read_pickle(read_dir + which_pacdat)
 
-# for c in range(0,len(chanList_10_20)):
-for c in range(0,1):
+for c in range(0,len(chanList_10_20)):
+# for c in range(0,1):
     
-    # chpac = pacdat[pacdat.channel==chanList_10_20[c]]
-    chpac = pacdat[pacdat.channel=='FZ']
+    chpac = pacdat[pacdat.channel==chanList_10_20[c]]
+    # chpac = pacdat[pacdat.channel=='FZ']
     
-    # for i in range(0,len(chpac)):
-    for i in range(0,1):
+    for i in range(0,len(chpac)):
+    # for i in range(0,1):
         sample_rate = int(chpac.iloc[i].eeg_file_name.split('_')[-1])
         thisFileName = chpac.iloc[i].eeg_file_name    
         
@@ -86,7 +86,7 @@ for c in range(0,1):
             
         if os.path.exists(thisPathFileName):
             data = np.loadtxt(thisPathFileName, delimiter=',', skiprows=1)
-            # print('Working on ' + thisFileName + ', ' + str(i+1) + ' of ' + str(len(chpac)) + ' files' )
+            print('Working on ' + thisFileName + ', ' + str(i+1) + ' of ' + str(len(chpac)) + ' files' )
         else:
             continue
         
@@ -111,7 +111,7 @@ for c in range(0,1):
             
             mn.append(x.min())
             mx.append(x.max())
-            print(str(mn[-1]) + ' to ' + str(mx[-1]) + '\n')
+            # print(str(mn[-1]) + ' to ' + str(mx[-1]) + '\n')
           
             
             # sns.heatmap(np.flip(x,0), cmap='Reds')
@@ -135,3 +135,5 @@ for c in range(0,1):
             # p.comodulogram(xpac.mean(-1), title=title, cmap='Reds', vmin=0, fz_labels=14, fz_title=18, fz_cblabel=14)
             # # p.savefig(write_dir + 'pac_figures\\' + thisFileName + '.jpg')
             # del p
+        # print(str(mn[-1]) + ' to ' + str(mx[-1]) + '\n')
+        print(str(min(mn)) + ' to ' + str(max(mx)) + '\n')
