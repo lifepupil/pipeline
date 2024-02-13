@@ -66,20 +66,20 @@ mx = []
 # pacdat = pd.read_csv(read_dir + which_pacdat)
 pacdat = pd.read_pickle(read_dir + which_pacdat)
 
-# for c in range(0,len(chanList_10_20)):
-for c in range(0,1):
+for c in range(0,len(chanList_10_20)):
+#for c in range(0,1):
     
-    # chpac = pacdat[pacdat.channel==chanList_10_20[c]]
-    chpac = pacdat[pacdat.channel=='TP8']
+    chpac = pacdat[pacdat.channel==chanList_10_20[c]]
+#    chpac = pacdat[pacdat.channel=='TP8']
     
-    # for i in range(0,len(chpac)):
-    for i in range(0,1):
+    for i in range(0,len(chpac)):
+#    for i in range(0,1):
         sample_rate = int(chpac.iloc[i].eeg_file_name.split('_')[-1])
-#        thisFileName = chpac.iloc[i].eeg_file_name
-        thisFileName = 'TP8_eec_4_f1_10006013_32_cnt_500'
+        thisFileName = chpac.iloc[i].eeg_file_name
+#        thisFileName = 'TP8_eec_4_f1_10006013_32_cnt_500'
         
-        # thisPathFileName = read_dir + 'cleaned_data\\' + thisFileName + '.csv'
-        thisPathFileName = read_dir + 'cleaned_data/' + thisFileName + '.csv'
+        thisPathFileName = read_dir + 'cleaned_data\\' + thisFileName + '.csv'
+#        thisPathFileName = read_dir + 'cleaned_data/' + thisFileName + '.csv'
         
         if chpac.iloc[i].alcoholic:
             # dx_folder = 'alcoholic\\'
@@ -88,12 +88,12 @@ for c in range(0,1):
             # dx_folder = 'nonalcoholic\\'
             dx_folder = 'nonalcoholic/'
 
-        print(thisPathFileName)
-#        if os.path.exists(thisPathFileName):
-        data = np.loadtxt(thisPathFileName, delimiter=',', skiprows=1)
-        print('Working on ' + thisFileName + ', ' + str(i+1) + ' of ' + str(len(chpac)) + ' files' )
-#        else:
-#            continue
+#        print(thisPathFileName)
+        if os.path.exists(thisPathFileName):
+            data = np.loadtxt(thisPathFileName, delimiter=',', skiprows=1)
+            print('Working on ' + thisFileName + ', ' + str(i+1) + ' of ' + str(len(chpac)) + ' files' )
+        else:
+            continue
         
         time_intervals = list(range(0,len(data),sample_rate*epoch_dur))
         
