@@ -23,10 +23,10 @@ norm_method = 4 # normalization method for correction - z-scores
 
 # read_dir = "D:\\COGA_eec\\"
 # write_dir = "D:\\COGA_eec\\"
-read_dir = "/ddn/crichard/input/"
-write_dir = "/ddn/crichard/pipeline/processed/"
+read_dir = "/ddn/crichard/data/"
+#write_dir = "/ddn/crichard/pipeline/processed/"
 #read_dir = os.environ['TMPDIR'] + '/input/'
-#write_dir = os.environ['TMPDIR'] + '/results/'
+write_dir = os.environ['TMPDIR'] + '/results/'
 which_pacdat = 'pacdat_cutoffs_flat_25_excessnoise_25.pkl'
 vmin = -3
 vmax = 7
@@ -58,6 +58,8 @@ chanList_10_20 = [
         'T6',
         'FP1',
         'FP2']
+chanList_10_20 = ['T8']
+
 
 
 mn = []
@@ -78,8 +80,8 @@ for c in range(0,len(chanList_10_20)):
         thisFileName = chpac.iloc[i].eeg_file_name
 #        thisFileName = 'TP8_eec_4_f1_10006013_32_cnt_500'
         
-        thisPathFileName = read_dir + 'cleaned_data\\' + thisFileName + '.csv'
-#        thisPathFileName = read_dir + 'cleaned_data/' + thisFileName + '.csv'
+#        thisPathFileName = read_dir + 'cleaned_data\\' + thisFileName + '.csv'
+        thisPathFileName = read_dir + 'cleaned_data/' + thisFileName + '.csv'
         
         if chpac.iloc[i].alcoholic:
             # dx_folder = 'alcoholic\\'
