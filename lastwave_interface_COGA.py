@@ -55,7 +55,9 @@ do_bad_channel_pacdat_update =  False
 do_bad_channel_removal =        False
 do_bad_channel_check =          False
 do_filter_figures_by_subject =  False
-do_filter_figures_by_condition = True
+do_filter_figures_by_condition = False
+do_filter_by_subject =          True
+do_resnet_image_conversion =    False
 do_resnet_pac =                 True
 
 
@@ -1666,6 +1668,113 @@ if do_filter_figures_by_condition:
     print(alc + '% of sample are AUD\n')
         
         
+if do_filter_by_subject:
+# MOVE PAC IMAGE FILES FROM SAME SUBJECT
+
+    import shutil
+    import random
+
+
+    min_age = 20
+    max_age = 30
+    channel = 'FZ'
+    base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
+    source_folder, targ_folder = 'new_pac','resnet_by_subj_3'
+    whichEEGfileExtention = 'jpg'
+    which_pacdat = 'pacdat_cutoffs_flat_25_excessnoise_25.pkl'
+
+    # CONSTANTS
+    chan_i = 0 
+    visit_i = 3 
+    id_i = 4 
+
+    # GET MASTER TABLE OUT 
+    pacdat = pd.read_pickle(base_dir + which_pacdat)
+
+    # GET FILE LIST WITH GIVEN EXTENSION FROM SOURCE FOLDER 
+    FileList = csd.get_file_list(base_dir + source_folder, whichEEGfileExtention)
+    # MAKE A DATAFRAME TO ENRICH WITH ADDITIONAL COLUMNS DERIVED FROM FILENAME INFO
+    file_info = pd.DataFrame(FileList, columns=['dir','fn'])
+    
+    c = [f.split('_')[chan_i] for f in  file_info.fn]
+    c = pd.DataFrame(c,columns=['channels'])
+    file_info.insert(0,'channels',c)
+
+    visitCodeList = [f.split('_')[visit_i][0] for f in  file_info.fn]
+    visitCodeList = [csd.convert_visit_code(v) for v in visitCodeList]    
+    v = pd.DataFrame(visitCodeList,columns=['this_visit'])
+    file_info.insert(0,'this_visit',v)
+    
+    v = [f.split('_')[id_i] for f in  file_info.fn]
+    v = pd.DataFrame(v,columns=['ID'])
+    file_info.insert(0,'ID',v)  
+    
+    # CYCLE THROUGH EVERY SUBJECT REPRESENTED IN FILES FROM SOURCE FOLDER
+    all_subj_figs = pd.unique(file_info.ID) 
+    for i in range(0,len(all_subj_figs)):
+        this_subj = all_subj_figs[i]
+        # this_subj = '10071029'
+        print(this_subj)
+        
+        # FIND ALL VISITS FOR A SUBJECT THEN FILTER BY AGE
+        svisits = file_info[(file_info.ID==this_subj)]
+        if len(svisits)>0:
+            # WE WANT TO INCLUDE AUD DIAGNOSES IN FOLDER NAME FOR QUICK REF
+            vinfo = pacdat[(pacdat.ID==int(this_subj)) & (pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age)]
+            if len(vinfo)>0:
+                
+                sv = list(set(svisits.this_visit.values))
+                vi = list(set(vinfo.this_visit.values))
+                for vs in sv:
+                    if vs not in vi:
+                        svisits = svisits[svisits.this_visit!=vs]
+                        
+                    
+                if len(svisits)>0:
+                    rand_row = svisits.loc[random.choice(svisits.index)]
+                    this_file =  rand_row.fn
+                        
+                    if vinfo[vinfo.this_visit==rand_row.this_visit].AUD_this_visit.values[0]:
+                        diag_folder = 'alcoholic'
+                    else:
+                        diag_folder = 'nonalcoholic'
+                        
+                    subj_path = base_dir + targ_folder + '\\' + diag_folder + '\\' 
+                    if not os.path.exists(subj_path):
+                        os.makedirs(subj_path) 
+                    
+                    src = base_dir + source_folder + '\\' + this_file
+                    trg = subj_path + this_file
+    
+                    shutil.copy(src, trg)
+            
+            
+if do_resnet_image_conversion:
+# THIS BLOCK USED TO RESIZE IMAGES FOR RESNET-50
+
+    from PIL import Image
+
+    whichEEGfileExtention = 'jpg'
+    base_dir = 'D:\\COGA_eec\\resnet_by_subj_2\\'  #  BIOWIZARD
+
+    fl_alc = csd.get_file_list(base_dir + 'alcoholic\\', whichEEGfileExtention)
+    fl_nonalc = csd.get_file_list(base_dir + 'nonalcoholic\\', whichEEGfileExtention)    
+    figList = fl_alc + fl_nonalc
+    
+    fig_info = pd.DataFrame(figList, columns=['dir','fn'])
+        
+    # IN FUTURE VERSION PERHAPS AS A HELPER FUNCTION
+    for i in range(0,len(fig_info)):
+        thisfig_dir = fig_info.loc[i,'dir']
+        thisfig_fn = fig_info.loc[i,'fn']
+        
+        img2 = Image.open(thisfig_dir + thisfig_fn)
+        print('Resizing ' + thisfig_fn + ' (' + str(i+1) + ' of ' + str(len(fig_info)) + ')' )
+        img2 = img2.resize((224, 224))
+        img2.save(thisfig_dir + thisfig_fn)
+        img2.close()
+        
+        
 if do_resnet_pac:
     # after unimpressive training using ImageNet,
     # tried setting weights to None,  
@@ -1692,20 +1801,17 @@ if do_resnet_pac:
     each_layer_trainable = False
     pooling = 'avg'
     base_dir = 'D:\\COGA_eec\\'
+    targ_folder = 'resnet_by_subj_3'
     whichEEGfileExtention = 'jpg'
 
     # targ_folder = 'PAC_10_20_both'
-    # data_str = 'PAC@FZ' # PAC@FZ chanxHz
-    # title_str = ' Age 20-30, males, '
-    
-    # title_str = 'Age 10-20 both sexes '    
-    # data_str = 'PAC' # PAC chanxHz
+    data_str = 'PAC@FZ' # PAC@FZ chanxHz
+    title_str = 'RANDSUBVIS Age 20-30, '
     pth = base_dir + targ_folder + '\\'
-
 
     img_height,img_width=224,224
     batch_size=32
-    epochs=10
+    epochs=50
 
     fl = csd.get_file_list(pth, whichEEGfileExtention)    
     fl_alc = csd.get_file_list(pth + 'alcoholic\\', whichEEGfileExtention)
@@ -1744,22 +1850,23 @@ if do_resnet_pac:
     coga_model.add(rn50)
     coga_model.layers[0].trainable=False
     # coga_model.add(Flatten())
-    # coga_model.add(Dense(512, activation='relu'))
-    # coga_model.add(Dense(1, activation='sigmoid'))
-
-    coga_model.add(K.layers.Flatten())
-    coga_model.add(K.layers.BatchNormalization())
-    coga_model.add(K.layers.Dense(256, activation='relu'))
-    coga_model.add(K.layers.Dropout(0.5))
-    coga_model.add(K.layers.BatchNormalization())
-    coga_model.add(K.layers.Dense(128, activation='relu'))
-    coga_model.add(K.layers.Dropout(0.5))
-    coga_model.add(K.layers.BatchNormalization())
-    coga_model.add(K.layers.Dense(64, activation='relu'))
-    coga_model.add(K.layers.Dropout(0.5))
-    coga_model.add(K.layers.BatchNormalization())
-    # coga_model.add(K.layers.Dense(10, activation='softmax'))
+    coga_model.add(Dense(50, activation='relu'))
+    coga_model.add(Dense(25, activation='relu'))
     coga_model.add(Dense(1, activation='sigmoid'))
+
+    # coga_model.add(K.layers.Flatten())
+    # coga_model.add(K.layers.BatchNormalization())
+    # coga_model.add(K.layers.Dense(256, activation='relu'))
+    # coga_model.add(K.layers.Dropout(0.5))
+    # coga_model.add(K.layers.BatchNormalization())
+    # coga_model.add(K.layers.Dense(128, activation='relu'))
+    # coga_model.add(K.layers.Dropout(0.5))
+    # coga_model.add(K.layers.BatchNormalization())
+    # coga_model.add(K.layers.Dense(64, activation='relu'))
+    # coga_model.add(K.layers.Dropout(0.5))
+    # coga_model.add(K.layers.BatchNormalization())
+    # # coga_model.add(K.layers.Dense(10, activation='softmax'))
+    # coga_model.add(Dense(1, activation='sigmoid'))
    
     # CHECK LAYERS
     for i, layer in enumerate(coga_model.layers): print(i, layer.name, "-", layer.trainable)
@@ -1807,7 +1914,7 @@ if do_resnet_pac:
 
 
 
-if 1:
+if 0:
     import scipy.stats as ss
     
     
