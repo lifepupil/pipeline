@@ -1819,18 +1819,14 @@ if do_resnet_pac:
     each_layer_trainable = False
     coga_layers_trainable = False
     
+    data_str = 'FZ' # PAC@FZ chanxHz
+    title_str = 'RNDSBJVIS Age 20-40, '
     base_dir = 'D:\\COGA_eec\\'
     targ_folder = 'resnet_by_subj_4'
     whichEEGfileExtention = 'jpg'
 
-    data_str = 'FZ' # PAC@FZ chanxHz
-    title_str = 'RNDSBJVIS Age 20-40, '
+    
     pth = base_dir + targ_folder + '\\'
-
-
-
-
-
     fl = csd.get_file_list(pth, whichEEGfileExtention)    
     fl_alc = csd.get_file_list(pth + 'alcoholic\\', whichEEGfileExtention)
     alc = str(round((len(fl_alc)/len(fl))*100,1))
