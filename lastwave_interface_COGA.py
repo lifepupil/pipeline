@@ -56,8 +56,8 @@ do_bad_channel_removal =        False
 do_bad_channel_check =          False
 do_filter_figures_by_subject =  False
 do_filter_figures_by_condition = False
-do_filter_by_subject =          True
 do_resnet_image_conversion =    False
+do_filter_by_subject =          False
 do_resnet_pac =                 True
 
 
@@ -1668,18 +1668,53 @@ if do_filter_figures_by_condition:
     print(alc + '% of sample are AUD\n')
         
         
+        
+        
+        
+        
+        
+if do_resnet_image_conversion:
+# THIS BLOCK USED TO RESIZE IMAGES FOR RESNET-50
+
+    from PIL import Image
+
+    whichEEGfileExtention = 'jpg'
+    base_dir = 'D:\\COGA_eec\\new_pac\\'  #  BIOWIZARD
+
+    # fl_alc = csd.get_file_list(base_dir + 'alcoholic\\', whichEEGfileExtention)
+    # fl_nonalc = csd.get_file_list(base_dir + 'nonalcoholic\\', whichEEGfileExtention)    
+    # figList = fl_alc + fl_nonalc
+    figList = csd.get_file_list(base_dir, whichEEGfileExtention)
+    
+    fig_info = pd.DataFrame(figList, columns=['dir','fn'])
+        
+    # IN FUTURE VERSION PERHAPS AS A HELPER FUNCTION
+    for i in range(0,len(fig_info)):
+        thisfig_dir = fig_info.loc[i,'dir']
+        thisfig_fn = fig_info.loc[i,'fn']
+        
+        img2 = Image.open(thisfig_dir + thisfig_fn)
+        print('Resizing ' + thisfig_fn + ' (' + str(i+1) + ' of ' + str(len(fig_info)) + ')' )
+        img2 = img2.resize((224, 224))
+        img2.save(thisfig_dir + thisfig_fn)
+        img2.close()
+        
+        
+        
+        
+        
+        
 if do_filter_by_subject:
 # MOVE PAC IMAGE FILES FROM SAME SUBJECT
 
     import shutil
     import random
 
-
     min_age = 20
-    max_age = 30
+    max_age = 40
     channel = 'FZ'
     base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
-    source_folder, targ_folder = 'new_pac','resnet_by_subj_3'
+    source_folder, targ_folder = 'new_pac','resnet_by_subj_5'
     whichEEGfileExtention = 'jpg'
     which_pacdat = 'pacdat_cutoffs_flat_25_excessnoise_25.pkl'
 
@@ -1748,33 +1783,12 @@ if do_filter_by_subject:
     
                     shutil.copy(src, trg)
             
+    print('\n ~~~~~~ There are N = ' + str(len(all_subj_figs)) + ' subjects in this dataset \n')
             
-if do_resnet_image_conversion:
-# THIS BLOCK USED TO RESIZE IMAGES FOR RESNET-50
-
-    from PIL import Image
-
-    whichEEGfileExtention = 'jpg'
-    base_dir = 'D:\\COGA_eec\\resnet_by_subj_2\\'  #  BIOWIZARD
-
-    fl_alc = csd.get_file_list(base_dir + 'alcoholic\\', whichEEGfileExtention)
-    fl_nonalc = csd.get_file_list(base_dir + 'nonalcoholic\\', whichEEGfileExtention)    
-    figList = fl_alc + fl_nonalc
     
-    fig_info = pd.DataFrame(figList, columns=['dir','fn'])
-        
-    # IN FUTURE VERSION PERHAPS AS A HELPER FUNCTION
-    for i in range(0,len(fig_info)):
-        thisfig_dir = fig_info.loc[i,'dir']
-        thisfig_fn = fig_info.loc[i,'fn']
-        
-        img2 = Image.open(thisfig_dir + thisfig_fn)
-        print('Resizing ' + thisfig_fn + ' (' + str(i+1) + ' of ' + str(len(fig_info)) + ')' )
-        img2 = img2.resize((224, 224))
-        img2.save(thisfig_dir + thisfig_fn)
-        img2.close()
-        
-        
+    
+    
+
 if do_resnet_pac:
     # after unimpressive training using ImageNet,
     # tried setting weights to None,  
@@ -1798,20 +1812,24 @@ if do_resnet_pac:
     # base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\' # LAPTOP    
     # base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
     learning_rate = 0.002
-    each_layer_trainable = False
     pooling = 'avg'
-    base_dir = 'D:\\COGA_eec\\'
-    targ_folder = 'resnet_by_subj_3'
-    whichEEGfileExtention = 'jpg'
-
-    # targ_folder = 'PAC_10_20_both'
-    data_str = 'PAC@FZ' # PAC@FZ chanxHz
-    title_str = 'RANDSUBVIS Age 20-30, '
-    pth = base_dir + targ_folder + '\\'
-
     img_height,img_width=224,224
     batch_size=32
-    epochs=50
+    epochs=100
+    each_layer_trainable = False
+    coga_layers_trainable = False
+    
+    base_dir = 'D:\\COGA_eec\\'
+    targ_folder = 'resnet_by_subj_4'
+    whichEEGfileExtention = 'jpg'
+
+    data_str = 'FZ' # PAC@FZ chanxHz
+    title_str = 'RNDSBJVIS Age 20-40, '
+    pth = base_dir + targ_folder + '\\'
+
+
+
+
 
     fl = csd.get_file_list(pth, whichEEGfileExtention)    
     fl_alc = csd.get_file_list(pth + 'alcoholic\\', whichEEGfileExtention)
@@ -1820,7 +1838,7 @@ if do_resnet_pac:
     
     train_ds = tf.keras.preprocessing.image_dataset_from_directory(
       pth,
-      validation_split=0.3,
+      validation_split=0.2,
       subset="training",
       seed=999,
       label_mode='binary',
@@ -1829,7 +1847,7 @@ if do_resnet_pac:
     
     validation_ds = tf.keras.preprocessing.image_dataset_from_directory(
         pth,
-        validation_split=0.3,
+        validation_split=0.2,
         subset="validation",
         seed=999,
         label_mode='binary',
@@ -1845,10 +1863,10 @@ if do_resnet_pac:
         weights='imagenet') # imagenet or None
     
     for each_layer in rn50.layers:
-        each_layer.trainable=False
-                
+        each_layer.trainable=each_layer_trainable
+                coga_layers_trainable
     coga_model.add(rn50)
-    coga_model.layers[0].trainable=False
+    coga_model.layers[0].trainable=coga_layers_trainable=False
     # coga_model.add(Flatten())
     coga_model.add(Dense(50, activation='relu'))
     coga_model.add(Dense(25, activation='relu'))
@@ -1872,7 +1890,7 @@ if do_resnet_pac:
     for i, layer in enumerate(coga_model.layers): print(i, layer.name, "-", layer.trainable)
 
     coga_model.compile(optimizer=Adam(learning_rate=learning_rate),
-                       loss=tf.keras.losses.BinaryCrossentropy(),
+                       loss=tf.keras.losses.hinge(),
                        metrics=['accuracy'])
     
     history = coga_model.fit(train_ds, 
@@ -1894,7 +1912,7 @@ if do_resnet_pac:
     epochs_range= range(epochs)
     plotter_lib.plot( epochs_range, history.history['accuracy'], label="Training Accuracy")
     plotter_lib.plot(epochs_range, history.history['val_accuracy'], label="Validation Accuracy")
-    plotter_lib.axis(ymin=0.4,ymax=1)
+    plotter_lib.axis(ymin=0.4,ymax=1.09)
     plotter_lib.grid()
     plotter_lib.title(data_str + ' ' + title_str)
     plotter_lib.ylabel('Accuracy')
@@ -1905,7 +1923,7 @@ if do_resnet_pac:
     epochs_range= range(epochs)
     plotter_lib.plot( epochs_range, history.history['loss'], label="Training Loss")
     plotter_lib.plot(epochs_range, history.history['val_loss'], label="Validation Loss")
-    plotter_lib.axis(ymin=0.4,ymax=1)
+    plotter_lib.axis(ymin=0,ymax=3)
     plotter_lib.grid()
     plotter_lib.title(data_str + ' ' + title_str)
     plotter_lib.ylabel('Loss')
