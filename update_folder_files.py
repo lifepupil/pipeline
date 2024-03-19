@@ -10,8 +10,11 @@ Created on Tue Mar 19 18:42:16 2024
 import coga_support_defs as csd
 import os
 
-base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
-read_folder, write_folder = 'cleaned_data_test','resnet_by_subj_5'
+# base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
+base_dir = "/ddn/crichard/pipeline/"
+#read_dir = os.environ['TMPDIR'] + '/input/'
+
+read_folder, write_folder = 'reference','processed'
 SourceEEGfileExtention = 'csv'
 TargetEEGfileExtention = 'jpg'
 
@@ -22,18 +25,20 @@ TargetEEGfileExtention = 'jpg'
 # existingFiles = csd.get_file_list(base_dir + read_folder, SourceEEGfileExtention)
 # cf = [f[1] for f in existingFiles]
 
-completeFiles = csd.get_file_list(base_dir + write_folder, TargetEEGfileExtention)
-cf = [f[1] for f in completeFiles]
-cff = [str.split(fn,'_') for fn in cf]
-cfff = set(['_'.join(fn[0:len(fn)-1])+'.'+SourceEEGfileExtention for fn in cff])
-i = 0 
-
-rl = [base_dir + read_folder + '\\' + f for f in cfff]
-
-for f in rl:
-    if os.path.isfile(f):
-        i+=1
-        print(f)
-        os.remove(f)
+for i in range(1,11):
+    
+    completeFiles = csd.get_file_list(base_dir + write_folder + str(i), TargetEEGfileExtention)
+    cf = [f[1] for f in completeFiles]
+    cff = [str.split(fn,'_') for fn in cf]
+    cfff = set(['_'.join(fn[0:len(fn)-1])+'.'+SourceEEGfileExtention for fn in cff])
+    fcount = 0 
+    
+    rl = [base_dir + read_folder + str(i) + '\\' + f for f in cfff]
+    
+    for f in rl:
+        if os.path.isfile(f):
+            fcount+=1
+            print(f)
+            os.remove(f)
         
-print('\n tranfered single EEG channel .CSV file count = ' + str(i))
+    print('\n tranfered single EEG channel .CSV file count = ' + str(fcount))
