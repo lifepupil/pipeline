@@ -33,7 +33,7 @@ for i in range(1,11):
     cfff = set(['_'.join(fn[0:len(fn)-1])+'.'+SourceEEGfileExtention for fn in cff])
     fcount = 0 
     
-    rl = [base_dir + read_folder + str(i) + '\\' + f for f in cfff]
+    rl = [base_dir + read_folder + str(i) + '/' + f for f in cfff]
     
     for f in rl:
         if os.path.isfile(f):
@@ -41,4 +41,4 @@ for i in range(1,11):
             print(f)
             os.remove(f)
         
-    print('\n tranfered single EEG channel .CSV file count = ' + str(fcount))
+    print('\n folder ' + read_folder + str(i) + ' tranfered single EEG channel .CSV file count = ' + str(fcount))
