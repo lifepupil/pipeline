@@ -39,26 +39,27 @@ import coga_support_defs as csd
 
 
 # INSTANCE VARIABLES
-do_sas_convert =                False              # TO CONVERT .SAS7PDAT FILES TO TABLES SO THAT SUBJECT METADATA CAN BE USED DOWNSTREAM
-do_plot_eeg_signal_and_mwt =    False  # TO PLOT SIGNAL AND HEATMAP FOR A GIVEN FILE
-do_filter_eeg_signal_cnt =      False    # TO DO LOW PASS, HIGH PASS, NOTCH FILTER TO REMOVE LINE NOISE FROM SIGNAL, AND ICA
-make_data_table =               False              # GENERATED A DATA TABLE WITH DEMOGRAPHIC INFO, ALCOHOLISM STATUS, AND MACHINE LEARNING INPUTS, E.G. BAND POWER
-do_stats =                      False                   # FOR TRADITIONAL STATISTICAL ANALYSIS 
-do_reshape_by_subject =         False       # RESHAPES pacdat SO THAT EACH ROW IS ONE SUBJECT-VISIT WITH ALL CHANNELS AT ALL FREQUENCY BANDS
-relocate_images_by_alcoholism = False
-do_deep_learn =                 False               # USES DATA TABLE AS INPUT TO DEEP LEARNING NETWORK TRAINING AND TESTING
-generate_pac_images =           False
-do_resnet_chanxfreq =           False
-do_bad_channel_check_table_gen = False
-do_bad_channel_figure_gen =     False
-do_bad_channel_pacdat_update =  False
-do_bad_channel_removal =        False
-do_bad_channel_check =          False
-do_filter_figures_by_subject =  False
-do_filter_figures_by_condition = False
-do_resnet_image_conversion =    False
-do_filter_by_subject =          False
-do_resnet_pac =                 True
+do_sas_convert =                    False              # TO CONVERT .SAS7PDAT FILES TO TABLES SO THAT SUBJECT METADATA CAN BE USED DOWNSTREAM
+do_plot_eeg_signal_and_mwt =        False  # TO PLOT SIGNAL AND HEATMAP FOR A GIVEN FILE
+do_filter_eeg_signal_cnt =          False    # TO DO LOW PASS, HIGH PASS, NOTCH FILTER TO REMOVE LINE NOISE FROM SIGNAL, AND ICA
+make_data_table =                   False              # GENERATED A DATA TABLE WITH DEMOGRAPHIC INFO, ALCOHOLISM STATUS, AND MACHINE LEARNING INPUTS, E.G. BAND POWER
+do_stats =                          False                   # FOR TRADITIONAL STATISTICAL ANALYSIS 
+do_reshape_by_subject =             False       # RESHAPES pacdat SO THAT EACH ROW IS ONE SUBJECT-VISIT WITH ALL CHANNELS AT ALL FREQUENCY BANDS
+relocate_images_by_alcoholism =     False
+do_deep_learn =                     False               # USES DATA TABLE AS INPUT TO DEEP LEARNING NETWORK TRAINING AND TESTING
+generate_pac_images =               False
+do_resnet_chanxfreq =               False
+do_bad_channel_check_table_gen =     False
+do_bad_channel_figure_gen =         False
+do_bad_channel_pacdat_update =      False
+do_bad_channel_removal =            False
+do_bad_channel_check =              False
+do_filter_figures_by_subject =      False
+do_filter_figures_by_condition =    False
+do_resnet_image_conversion =        False
+do_filter_by_subject =              True
+do_resnet_pac =                     True
+resnet_to_logistic =                False
 
 
 # PARAMETERS
@@ -1709,22 +1710,23 @@ if do_filter_by_subject:
 
     import shutil
     import random
-
+    
+    sex = ''
     min_age = 20
-    max_age = 40
+    max_age = 50
+    flat_cut = 20
+    noise_cut = 5 
     channel = 'FZ'
     base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
-    source_folder, targ_folder = 'new_pac','resnet_by_subj_5'
+    source_folder, targ_folder = 'new_pac','resnet_by_subj_20_50_cAUD_flat' + str(flat_cut) + '_noise' + str(noise_cut)
     whichEEGfileExtention = 'jpg'
     which_pacdat = 'pacdat_cutoffs_flat_25_excessnoise_25.pkl'
 
-    # CONSTANTS
+    # CONSTANTS    
     chan_i = 0 
     visit_i = 3 
     id_i = 4 
 
-    # GET MASTER TABLE OUT 
-    pacdat = pd.read_pickle(base_dir + which_pacdat)
 
     # GET FILE LIST WITH GIVEN EXTENSION FROM SOURCE FOLDER 
     FileList = csd.get_file_list(base_dir + source_folder, whichEEGfileExtention)
@@ -1744,18 +1746,34 @@ if do_filter_by_subject:
     v = pd.DataFrame(v,columns=['ID'])
     file_info.insert(0,'ID',v)  
     
+    # GET MASTER TABLE OUT 
+    pacdat = pd.read_pickle(base_dir + which_pacdat)
+    if len(sex)==0: 
+        pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.flat_score<=flat_cut) & (pacdat.noise_score<=noise_cut)]
+    else:             
+        pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.flat_score<=flat_cut) & (pacdat.noise_score<=noise_cut) & (pacdat.sex==sex)]
+        
+    jpg_subs = set([int(i) for i in set(file_info.ID)])
+    pd_subs =  set([int(i) for i in set(pd_filtered.ID)])
+
+    print(targ_folder)
+    filtered_N = str(len(set(pd_filtered.ID)))
+    qualifying_N = str(len(jpg_subs.intersection(pd_subs)))
+    print('There are N = ' + qualifying_N + ' subjects out of ' + filtered_N + ' without flat channel or noise artifact in age range\n')
+
     # CYCLE THROUGH EVERY SUBJECT REPRESENTED IN FILES FROM SOURCE FOLDER
     all_subj_figs = pd.unique(file_info.ID) 
     for i in range(0,len(all_subj_figs)):
         this_subj = all_subj_figs[i]
         # this_subj = '10071029'
-        print(this_subj)
         
         # FIND ALL VISITS FOR A SUBJECT THEN FILTER BY AGE
         svisits = file_info[(file_info.ID==this_subj)]
         if len(svisits)>0:
+            # print(this_subj)
+
             # WE WANT TO INCLUDE AUD DIAGNOSES IN FOLDER NAME FOR QUICK REF
-            vinfo = pacdat[(pacdat.ID==int(this_subj)) & (pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age)]
+            vinfo = pd_filtered[(pd_filtered.ID==int(this_subj))]
             if len(vinfo)>0:
                 
                 sv = list(set(svisits.this_visit.values))
@@ -1769,7 +1787,9 @@ if do_filter_by_subject:
                     rand_row = svisits.loc[random.choice(svisits.index)]
                     this_file =  rand_row.fn
                         
+                    # if vinfo[vinfo.this_visit==rand_row.this_visit].ALAB_this_visit.values[0]:
                     if vinfo[vinfo.this_visit==rand_row.this_visit].AUD_this_visit.values[0]:
+                    # if vinfo[vinfo.this_visit==rand_row.this_visit].ALD_this_visit.values[0]:
                         diag_folder = 'alcoholic'
                     else:
                         diag_folder = 'nonalcoholic'
@@ -1787,7 +1807,7 @@ if do_filter_by_subject:
             
     
     
-    
+
 
 if do_resnet_pac:
     # after unimpressive training using ImageNet,
@@ -1798,31 +1818,42 @@ if do_resnet_pac:
     # can also check that the images are being read in RBG per input_shape 
     # 224 x 224 x 3 prerequisite using applications.resnet50.preprocess_input
     
+    # TO DO
+    # try other resnet models
+    # add batch normalization to input layer to center/rescale data
+    # consider other options to best fit 'expectations' of pretrained resnet model
+    # 
+    
     import matplotlib.pyplot as plotter_lib
     import numpy as np
     # import PIL as image_lib
     import tensorflow as tf
-    import tensorflow.keras as K
-    from tensorflow.keras.layers import Flatten
+    from tensorflow.keras.layers import BatchNormalization, Input, GlobalAveragePooling2D, Flatten, Dropout
     from keras.layers.core import Dense
     from tensorflow.keras.models import Sequential
     from tensorflow.keras.optimizers import Adam
+    from keras.models import Model
+    from tensorflow.keras.applications.resnet import preprocess_input
+    from tensorflow.keras.layers.experimental.preprocessing import Rescaling
     # import cv2
 
     # base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\' # LAPTOP    
     # base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
-    learning_rate = 0.002
-    pooling = 'avg'
+    learning_rate = 0.001
+    pooling = 'avg' # avg max None
     img_height,img_width=224,224
     batch_size=32
     epochs=100
-    each_layer_trainable = False
-    coga_layers_trainable = False
+
+    include_top = False
+    resnet_layers_trainable = False
+    coga_layers_trainable = True
+    save_resnet_model = False
     
     data_str = 'FZ' # PAC@FZ chanxHz
-    title_str = 'RNDSBJVIS Age 20-40, '
+    title_str = 'rn50 cRSV AUD Age 20-50 f20n5 '
     base_dir = 'D:\\COGA_eec\\'
-    targ_folder = 'resnet_by_subj_4'
+    # targ_folder = 'resnet_by_subj_20_40_cAUD_flat257_noise257' # 'resnet_by_subj_20_40_cAUD_flat20_noise5'
     whichEEGfileExtention = 'jpg'
 
     
@@ -1850,55 +1881,82 @@ if do_resnet_pac:
         image_size=(img_height, img_width),
         batch_size=batch_size)
     
-    coga_model = Sequential()
-
-    rn50= tf.keras.applications.ResNet50(include_top=False,
+    # rn = tf.keras.applications.ResNet152(
+    rn = tf.keras.applications.ResNet50(
+        include_top=include_top,
         input_shape=(img_height, img_width,3),
         pooling=pooling,
         classes=2,
         weights='imagenet') # imagenet or None
+    rn.trainable = False
+    # for each_layer in rn.layers[-4:]:
+    for each_layer in rn.layers:
+        each_layer.trainable = resnet_layers_trainable
+                
+    # # PREPROCESSING BLOCK TO PREP PAC IMAGE DATA FOR RESNET ??
+    # preprocess_input = tf.keras.applications.resnet50.preprocess_input
+    # train_ds = train_ds.map(lambda x, y: (preprocess_input(x), y))
+    # validation_ds = validation_ds.map(lambda x, y: (preprocess_input(x), y))
     
-    for each_layer in rn50.layers:
-        each_layer.trainable=each_layer_trainable
-                coga_layers_trainable
-    coga_model.add(rn50)
-    coga_model.layers[0].trainable=coga_layers_trainable=False
-    # coga_model.add(Flatten())
-    coga_model.add(Dense(50, activation='relu'))
-    coga_model.add(Dense(25, activation='relu'))
-    coga_model.add(Dense(1, activation='sigmoid'))
-
-    # coga_model.add(K.layers.Flatten())
-    # coga_model.add(K.layers.BatchNormalization())
-    # coga_model.add(K.layers.Dense(256, activation='relu'))
-    # coga_model.add(K.layers.Dropout(0.5))
-    # coga_model.add(K.layers.BatchNormalization())
-    # coga_model.add(K.layers.Dense(128, activation='relu'))
-    # coga_model.add(K.layers.Dropout(0.5))
-    # coga_model.add(K.layers.BatchNormalization())
-    # coga_model.add(K.layers.Dense(64, activation='relu'))
-    # coga_model.add(K.layers.Dropout(0.5))
-    # coga_model.add(K.layers.BatchNormalization())
-    # # coga_model.add(K.layers.Dense(10, activation='softmax'))
+    # coga_model = Sequential()
+    # coga_model.add(rn)
+    # # coga_model.layers[0].trainable=False
+    # coga_model.add(Dense(1024, activation='relu'))
+    # coga_model.add(Dense(10, activation='relu'))
     # coga_model.add(Dense(1, activation='sigmoid'))
+
+    x = rn.output
+    # x = GlobalAveragePooling2D()(x)  # Add a global spatial average pooling layer
+    # x = Flatten()(x)  # Flatten the output to feed into a Dense layer
+    x = Dense(1024, activation='relu')(x)  # Add a fully connected layer with 1024 units and ReLU activation
+    # x = Dropout(0.25)(x)
+    # x = Dense(512, activation='relu')(x)  # Add a fully connected layer with 1024 units and ReLU activation
+    # x = Dense(256, activation='relu')(x)  # Add a fully connected layer with 1024 units and ReLU activation
+    # x = Dense(128, activation='relu')(x)  # Add a fully connected layer with 1024 units and ReLU activation
+    # x = Dense(64, activation='relu')(x)  # Add a fully connected layer with 1024 units and ReLU activation
+    # x = Dense(32, activation='relu')(x)  # Add a fully connected layer with 1024 units and ReLU activation
+    # x = Dense(16, activation='relu')(x)  # Add a fully connected layer with 1024 units and ReLU activation
+    predictions = Dense(1, activation='sigmoid')(x)  # Add the final output layer with one neuron and sigmoid activation for binary classification
+    # predictions = Dense(k-1, activation='softmax')(x)  # Add the final output layer with one neuron and sigmoid activation for binary classification
+    
+    # This is the model we will train
+    # coga_model = Model(inputs=rn.input, outputs=x)
+    # input_layer = Input(shape=(224,224,3))
+    # x = BatchNormalization()(input_layer)
+    # x = rn(x)
+    # predictions = Dense(1, activation='sigmoid')(x)
+    coga_model = Model(inputs=rn.input, outputs=predictions)
    
     # CHECK LAYERS
-    for i, layer in enumerate(coga_model.layers): print(i, layer.name, "-", layer.trainable)
+    # for i, layer in enumerate(rn.layers): print(i, layer.name, "-", layer.trainable)
+    # for i, layer in enumerate(coga_model.layers): print(i, layer.name, "-", layer.trainable)
+    coga_model.summary()
+
+    # INSERT SOME OTHER CLASSICAL MACHINE LEARNNG TECHNIQUE HERE 
+    # sklearn
+    # GET LINK FROM JT; 
+    # ASK CHATGPT: 
+    # I HAVE A KERAS DATALOADER THAT TRAINS A MODEL - HOW CAN I TRAIN AN SKLEARN 
+    # LOGISTIC REGRESSION MODEL USING RESNET50 EMBEDDING OF SHAPE 2048?
 
     coga_model.compile(optimizer=Adam(learning_rate=learning_rate),
-                       loss=tf.keras.losses.hinge(),
+                       loss=tf.keras.losses.BinaryCrossentropy(),
                        metrics=['accuracy'])
+    # loss=tf.keras.losses.BinaryCrossentropy(from_logits=True)
+    
     
     history = coga_model.fit(train_ds, 
                              validation_data=validation_ds, 
                              epochs=epochs,
                              batch_size=batch_size,
                              verbose=1)
-    coga_model.summary()
 
+    # SAVE THIS MODEL
+    if save_resnet_model:
+        coga_model.save(base_dir + 'MODEL_' + targ_folder + '.keras')
     
     
-    title_str+= ' (N=' + N_str + ', alc=' + alc + '%) lr=' + str(learning_rate) + ' pool=' + pooling + ' train=' + str(each_layer_trainable)
+    title_str+= ' N=' + N_str + ' alc=' + alc + '% lr=' + str(learning_rate) + ' pool=' + pooling + ' dropout=F' 
     fn = title_str.replace('(','')
     fn = fn.replace(')','')
     fn = fn.replace('=','_')
@@ -1927,7 +1985,9 @@ if do_resnet_pac:
     plotter_lib.legend(['train', 'validation'])  
 
 
-
+if resnet_to_logistic:
+    a = 0
+    
 if 0:
     import scipy.stats as ss
     
