@@ -77,6 +77,34 @@ FREQ_BANDS = {"delta": [0.5, 4],
               'low_gamma': [30, 50]}
 
 
+
+if do_image_size_conversion:
+#  HIGHJACKED TO DO IMAGE SIZE CONVERSION FOR RESNET-50
+
+    from PIL import Image
+
+    whichEEGfileExtention = 'jpg'
+    read_dir = 'C:\\Users\\lifep\\Documents\\COGA_eec\\pac_figures_segmented\\'
+
+    fl_alc = csd.get_file_list(read_dir + 'alcoholic\\', whichEEGfileExtention)
+    fl_nonalc = csd.get_file_list(read_dir + 'nonalcoholic\\', whichEEGfileExtention)    
+    figList = fl_alc + fl_nonalc
+    
+    fig_info = pd.DataFrame(figList, columns=['dir','fn'])
+        
+    # THIS BLOCK USED TO RESIZE IMAGES FOR RESNET-50
+    # IN FUTURE VERSION PERHAPS AS A HELPER FUNCTION
+    for i in range(0,len(fig_info)):
+        thisfig_dir = fig_info.loc[i,'dir']
+        thisfig_fn = fig_info.loc[i,'fn']
+        
+        img2 = Image.open(thisfig_dir + thisfig_fn)
+        print('Resizing ' + thisfig_fn + ' (' + str(i+1) + ' of ' + str(len(fig_info)) + ')' )
+        img2 = img2.resize((224, 224))
+        img2.save(thisfig_dir + thisfig_fn)
+        img2.close()
+
+
 # PARAMETERS FOR make_data_table PHASE AMPLITUDE COUPLING USING TENSORPAC
 if make_data_table:
     # TO GET SUBJECT-WISE STATS POINT source_dir TO A data FOLDER AND SET whichEEGfileExtention TO cnt
@@ -1381,21 +1409,21 @@ if do_bad_channel_removal:
     
     
 if do_bad_channel_check:
-#  THIS MOVES IMAGE FILES DERIVED FROM 'BAD' CHANNELS AS MARKED IN pacdat INTO 
-# SEPARATE FOLDERS SO THAT THEY ARE NOT USED IN MACHINE LEARNING
+#  HIGHJACKED TO DO IMAGE SIZE CONVERSION FOR RESNET-50
 
     from PIL import Image
 
 
     whichEEGfileExtention = 'jpg'
-    read_dir = 'D:\\COGA_eec\\pac_figures\\'  #  BIOWIZARD
-    base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
+    read_dir = 'C:\\Users\\lifep\\Documents\\COGA_eec\\pac_figures_segmented\\'
+    # read_dir = 'D:\\COGA_eec\\pac_figures\\'  #  BIOWIZARD
+    # base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
     # whichEEGfileExtention = 'png'
     # read_dir = 'D:\\COGA_eec\\eeg_figures\\'  #  BIOWIZARD
     # base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\' # LAPTOP
     
-    badf_target_path = 'D:\\COGA_eec\\pac_figures\\flat_channels\\'
-    badn_target_path = 'D:\\COGA_eec\\pac_figures\\noisy_channels\\'
+    # badf_target_path = 'D:\\COGA_eec\\pac_figures\\flat_channels\\'
+    # badn_target_path = 'D:\\COGA_eec\\pac_figures\\noisy_channels\\'
     # badf_target_path = 'D:\\COGA_eec\\eeg_figures_flat\\'
     # badn_target_path = 'D:\\COGA_eec\\eeg_figures_noise\\'
     # pacdat_target_path = 'D:\\COGA_eec\\eeg_figures_pacdat\\'
@@ -1510,9 +1538,9 @@ if do_filter_figures_by_condition:
     source_folder = 'pac_figures_all' # pac_figures_all chan_hz
     data_str = 'PAC' # PAC chanxHz
     whichEEGfileExtention = 'jpg'
-    min_age = 0 
-    max_age = 100    
-    sex = 'F' # F M or both 
+    min_age = 35 
+    max_age = 45    
+    sex = 'M' # F M or both 
     do_copy = True
 
     diag_dirs_exist = False # HAVE THE IMAGES ALREADY BEEN SORTED INTO ALCOHOLIC AND NONALCHOLIC?
@@ -1839,11 +1867,25 @@ if do_resnet_pac:
 
     # base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\' # LAPTOP    
     # base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
+
+    base_dir = 'C:\\Users\\lifep\\Documents\\COGA_eec\\'
+    whichEEGfileExtention = 'jpg'
+    targ_folder = 'pac_figures_segmented'
+    data_str = 'PAC@T8' # PAC@FZ chanxHz
+    title_str = ''
+    # targ_folder = 'PAC_10_20_both'
+    # data_str = 'PAC' # PAC chanxHz
+    # title_str = 'Age 10-20 both sexes '  
+        
     learning_rate = 0.001
-    pooling = 'avg' # avg max None
+    each_layer_trainable = False
+    pooling = 'avg'
     img_height,img_width=224,224
     batch_size=32
     epochs=100
+
+
+    pth = base_dir + targ_folder + '\\'
 
     include_top = False
     resnet_layers_trainable = False
@@ -1888,6 +1930,7 @@ if do_resnet_pac:
         pooling=pooling,
         classes=2,
         weights='imagenet') # imagenet or None
+
     rn.trainable = False
     # for each_layer in rn.layers[-4:]:
     for each_layer in rn.layers:
@@ -1926,6 +1969,29 @@ if do_resnet_pac:
     # x = rn(x)
     # predictions = Dense(1, activation='sigmoid')(x)
     coga_model = Model(inputs=rn.input, outputs=predictions)
+    
+    for each_layer in rn50.layers:
+        each_layer.trainable=each_layer_trainable
+                
+    coga_model.add(rn50)
+    coga_model.layers[0].trainable=False
+    coga_model.add(Flatten())
+    coga_model.add(Dense(512, activation='relu'))
+    coga_model.add(Dense(1, activation='sigmoid'))
+
+    # coga_model.add(K.layers.Flatten())
+    # coga_model.add(K.layers.BatchNormalization())
+    # coga_model.add(K.layers.Dense(256, activation='relu'))
+    # coga_model.add(K.layers.Dropout(0.5))
+    # coga_model.add(K.layers.BatchNormalization())
+    # coga_model.add(K.layers.Dense(128, activation='relu'))
+    # coga_model.add(K.layers.Dropout(0.5))
+    # coga_model.add(K.layers.BatchNormalization())
+    # coga_model.add(K.layers.Dense(64, activation='relu'))
+    # coga_model.add(K.layers.Dropout(0.5))
+    # coga_model.add(K.layers.BatchNormalization())
+    # # coga_model.add(K.layers.Dense(10, activation='softmax'))
+    # coga_model.add(Dense(1, activation='sigmoid'))
    
     # CHECK LAYERS
     # for i, layer in enumerate(rn.layers): print(i, layer.name, "-", layer.trainable)
@@ -1988,11 +2054,25 @@ if do_resnet_pac:
 if resnet_to_logistic:
     a = 0
     
+
 if 0:
-    import scipy.stats as ss
+    # import scipy.stats as ss
+    import yaml
     
-    
-    fa = pacdat[(pacdat.AUD_this_visit==True) & (pacdat.sex=='F')].age_this_visit
-    fna = pacdat[(pacdat.AUD_this_visit==False) & (pacdat.sex=='F')].age_this_visit
+    # fa = pacdat[(pacdat.AUD_this_visit==True) & (pacdat.sex=='F')].age_this_visit
+    # fna = pacdat[(pacdat.AUD_this_visit==False) & (pacdat.sex=='F')].age_this_visit
         
-    ss.ttest_ind(fa,fna, equal_var=False)
+    # ss.ttest_ind(fa,fna, equal_var=False)
+    
+    yml_p = 'C:\\Users\\lifep\\'
+    yml_f = 'pac3.yml'
+    with open(yml_p + yml_f, 'r') as file:
+        p = yaml.safe_load(file)
+        # Loader=yaml.FullLoader
+        print(p)
+    
+    
+    
+    
+    
+    
