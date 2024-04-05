@@ -78,33 +78,6 @@ FREQ_BANDS = {"delta": [0.5, 4],
 
 
 
-if do_image_size_conversion:
-#  HIGHJACKED TO DO IMAGE SIZE CONVERSION FOR RESNET-50
-
-    from PIL import Image
-
-    whichEEGfileExtention = 'jpg'
-    read_dir = 'C:\\Users\\lifep\\Documents\\COGA_eec\\pac_figures_segmented\\'
-
-    fl_alc = csd.get_file_list(read_dir + 'alcoholic\\', whichEEGfileExtention)
-    fl_nonalc = csd.get_file_list(read_dir + 'nonalcoholic\\', whichEEGfileExtention)    
-    figList = fl_alc + fl_nonalc
-    
-    fig_info = pd.DataFrame(figList, columns=['dir','fn'])
-        
-    # THIS BLOCK USED TO RESIZE IMAGES FOR RESNET-50
-    # IN FUTURE VERSION PERHAPS AS A HELPER FUNCTION
-    for i in range(0,len(fig_info)):
-        thisfig_dir = fig_info.loc[i,'dir']
-        thisfig_fn = fig_info.loc[i,'fn']
-        
-        img2 = Image.open(thisfig_dir + thisfig_fn)
-        print('Resizing ' + thisfig_fn + ' (' + str(i+1) + ' of ' + str(len(fig_info)) + ')' )
-        img2 = img2.resize((224, 224))
-        img2.save(thisfig_dir + thisfig_fn)
-        img2.close()
-
-
 # PARAMETERS FOR make_data_table PHASE AMPLITUDE COUPLING USING TENSORPAC
 if make_data_table:
     # TO GET SUBJECT-WISE STATS POINT source_dir TO A data FOLDER AND SET whichEEGfileExtention TO cnt
@@ -1742,11 +1715,11 @@ if do_filter_by_subject:
     sex = ''
     min_age = 20
     max_age = 50
-    flat_cut = 20
-    noise_cut = 5 
+    flat_cut = 256
+    noise_cut = 256 
     channel = 'FZ'
     base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
-    source_folder, targ_folder = 'new_pac','resnet_by_subj_20_50_cAUD_flat' + str(flat_cut) + '_noise' + str(noise_cut)
+    source_folder, targ_folder = 'new_pac','resnet_by_subj_' + str(min_age) + '_' + str(max_age) + '_cAUD_flat' + str(flat_cut) + '_noise' + str(noise_cut)
     whichEEGfileExtention = 'jpg'
     which_pacdat = 'pacdat_cutoffs_flat_25_excessnoise_25.pkl'
 
@@ -1866,26 +1839,12 @@ if do_resnet_pac:
     # import cv2
 
     # base_dir = 'C:\\Users\\crichard\\Documents\\COGA\\' # LAPTOP    
-    # base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
-
-    base_dir = 'C:\\Users\\lifep\\Documents\\COGA_eec\\'
-    whichEEGfileExtention = 'jpg'
-    targ_folder = 'pac_figures_segmented'
-    data_str = 'PAC@T8' # PAC@FZ chanxHz
-    title_str = ''
-    # targ_folder = 'PAC_10_20_both'
-    # data_str = 'PAC' # PAC chanxHz
-    # title_str = 'Age 10-20 both sexes '  
-        
+    base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
     learning_rate = 0.001
-    each_layer_trainable = False
     pooling = 'avg'
     img_height,img_width=224,224
     batch_size=32
     epochs=100
-
-
-    pth = base_dir + targ_folder + '\\'
 
     include_top = False
     resnet_layers_trainable = False
@@ -1895,7 +1854,7 @@ if do_resnet_pac:
     data_str = 'FZ' # PAC@FZ chanxHz
     title_str = 'rn50 cRSV AUD Age 20-50 f20n5 '
     base_dir = 'D:\\COGA_eec\\'
-    # targ_folder = 'resnet_by_subj_20_40_cAUD_flat257_noise257' # 'resnet_by_subj_20_40_cAUD_flat20_noise5'
+    targ_folder = 'resnet_by_subj_20_50_cAUD_flat256_noise256' # 'resnet_by_subj_20_40_cAUD_flat20_noise5'
     whichEEGfileExtention = 'jpg'
 
     
@@ -1951,7 +1910,7 @@ if do_resnet_pac:
     x = rn.output
     # x = GlobalAveragePooling2D()(x)  # Add a global spatial average pooling layer
     # x = Flatten()(x)  # Flatten the output to feed into a Dense layer
-    x = Dense(1024, activation='relu')(x)  # Add a fully connected layer with 1024 units and ReLU activation
+    x = Dense(2048, activation='relu')(x)  # Add a fully connected layer with 1024 units and ReLU activation
     # x = Dropout(0.25)(x)
     # x = Dense(512, activation='relu')(x)  # Add a fully connected layer with 1024 units and ReLU activation
     # x = Dense(256, activation='relu')(x)  # Add a fully connected layer with 1024 units and ReLU activation
@@ -1970,14 +1929,12 @@ if do_resnet_pac:
     # predictions = Dense(1, activation='sigmoid')(x)
     coga_model = Model(inputs=rn.input, outputs=predictions)
     
-    for each_layer in rn50.layers:
-        each_layer.trainable=each_layer_trainable
                 
-    coga_model.add(rn50)
-    coga_model.layers[0].trainable=False
-    coga_model.add(Flatten())
-    coga_model.add(Dense(512, activation='relu'))
-    coga_model.add(Dense(1, activation='sigmoid'))
+    # coga_model.add(rn50)
+    # coga_model.layers[0].trainable=False
+    # coga_model.add(Flatten())
+    # coga_model.add(Dense(512, activation='relu'))
+    # coga_model.add(Dense(1, activation='sigmoid'))
 
     # coga_model.add(K.layers.Flatten())
     # coga_model.add(K.layers.BatchNormalization())
