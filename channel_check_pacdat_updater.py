@@ -29,11 +29,13 @@ which_pacdat = 'pacdat_MASTER.pkl'
 pacdat = pd.read_pickle(read_dir + which_pacdat)
 # pacdat.insert(11,'sample_rate', np.zeros(len(pacdat)))
 # pacdat.insert(2,'max_noise', np.zeros(len(pacdat)))
+pacdat.insert(4,'max_noise_slip'+str(slip_n_cutoff), np.zeros(len(pacdat))) 
 # pacdat.insert(2,'max_flat', np.zeros(len(pacdat)))
 
-ri = 493610
+# ri = 493610
+ri = 0
 for r in range(ri,len(pacdat)):
-    
+    # print('Working on ' + pacdat.iloc[r].eeg_file_name)
     
     if pacdat.iloc[r].channel=='FZ':
         sample_rate = int(pacdat.iloc[r].eeg_file_name.split('_')[-1])
@@ -68,7 +70,7 @@ for r in range(ri,len(pacdat)):
                 if slip_f>0:
                     slip_f -= 1
             elif flat_interval>0:
-                if slip_f==slip_f_cutoff:
+                if slip_f == slip_f_cutoff:
                     flat_intervals = np.append(flat_intervals,flat_interval)
                     flat_interval = 0
                 else:
@@ -79,21 +81,25 @@ for r in range(ri,len(pacdat)):
                 if slip_n>0:
                     slip_n -= 1
             elif noise_interval>0:
-                if slip_n==slip_n_cutoff:
+                if slip_n == slip_n_cutoff:
                     noise_intervals = np.append(noise_intervals,noise_interval)
                     noise_interval = 0
                 else:
                     slip_n += 1  
                     
         flat_intervals = flat_intervals/sample_rate
-        noise_intervals = noise_intervals/sample_rate
         pacdat.at[r,'max_flat'] = max(flat_intervals)
+
+        noise_intervals = noise_intervals/sample_rate
         pacdat.at[r,'max_noise'] = max(noise_intervals)
+        # pacdat.at[r,'max_noise_slip'+str(slip_n_cutoff)] = max(noise_intervals)
+        
 pacdat.to_pickle(read_dir + which_pacdat)
 
 # fz = pacdat[(pacdat.channel=='FZ') & (pacdat.max_flat>0)]
 # fz = pacdat[(pacdat.channel=='FZ') & (pacdat.max_noise>0)]
 # fz = pacdat[(pacdat.channel=='FZ') & (pacdat.max_noise>0) & (pacdat.max_flat>0)]
-# fz = pacdat[(pacdat.channel=='FZ')]
+fz = pacdat[(pacdat.channel=='FZ')]
 # fz[['max_flat']].plot.hist(bins=10,xlabel='seconds', title='Duration of maximum flat interval\n(by EEG channel)',logy=True)
 # fz[['max_noise']].plot.hist(bins=10,xlabel='seconds', title='Duration of maximum noise interval\n(by EEG channel)',logy=True)
+fz[['max_noise_slip1']].plot.hist(bins=10,xlabel='seconds', title='Duration of maximum noise interval with slip1\n(by EEG channel from eec)',logy=True)
