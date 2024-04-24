@@ -10,8 +10,8 @@ Created on Tue Mar 19 18:42:16 2024
 import coga_support_defs as csd
 import os
 
-# base_dir = 'D:\\COGA_eec\\update_folder_testing\\' #  BIOWIZARD
-base_dir = "/ddn/crichard/pipeline/"
+base_dir = 'D:\\COGA_eec\\update_folder_testing\\' #  BIOWIZARD
+# base_dir = "/ddn/crichard/pipeline/"
 #read_dir = os.environ['TMPDIR'] + '/input/'
 
 read_folder, write_folder = 'reference','processed'

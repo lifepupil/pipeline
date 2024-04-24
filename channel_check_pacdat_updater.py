@@ -16,13 +16,16 @@ slip_f_cutoff = 0 # FOR FLATNESS (intervals of below 5uV diff)
 slip_n_cutoff = 0 # FOR NOISINESS (intervals continuously above 100uV diff)
 flat_threshold = 0.000005 # STANDARD 5 uV
 noise_threshold = 0.000100 # STANDARD 100 uV
-sub_dir = 'FZ/' # cleaned_data FZ
+sub_dir = '' # cleaned_data FZ
+
 which_pacdat = 'pacdat_MASTER.pkl'
 
 # csv_dir = "D:\\COGA_eec\\"
 # pac_dir = "D:\\COGA_eec\\"
-csv_dir = "/ddn/crichard/eeg_csv/"
-pac_dir = "/ddn/crichard/eeg_csv/pacdat/"
+# csv_dir = "/ddn/crichard/eeg_csv/"
+# pac_dir = "/ddn/crichard/eeg_csv/pacdat/"
+csv_dir = os.environ['TMPDIR'] + '/data/'
+pac_dir = os.environ['TMPDIR'] + '/input/'
 
 
 pacdat = pd.read_pickle(pac_dir + which_pacdat)
@@ -143,8 +146,8 @@ pacdat.to_pickle(pac_dir + which_pacdat)
 # fz = pacdat[(pacdat.channel=='FZ')]
 # fz[['max_flat']].plot.hist(bins=10,xlabel='seconds', title='Duration of maximum flat interval\n(by EEG channel)',logy=True)
 # fz[['max_noise']].plot.hist(bins=10,xlabel='seconds', title='Duration of maximum noise interval\n(by EEG channel)',logy=True)
-# fz[['max_flat_slip1']].plot.hist(bins=50,xlabel='seconds', title='Max duration of flat interval with slip1\n(by EEG channel from eec)',logy=False)
+# fz[['max_flat_slip1']].plot.hist(bins=50,xlabel='seconds', title='Max duration of flat interval with slip1\n(by EEG channel from eec)',logy=True)
 # fz[['perc_flat_slip1']].plot.hist(bins=50,xlabel='percentage', title='Percent flat interval with slip1\n(by EEG channel from eec)',logy=True)
 
 # ss = list(set(fz.site))
-# for i in range(0,len(ss)): print(ss[i]+' '+ str(len(fz[(fz.max_flat_slip1<25) & (fz.site==ss[i])])))
+# for i in range(0,len(ss)): print(ss[i]+' '+ str(len(fz[(fz.max_flat==0) & (fz.site==ss[i])])))

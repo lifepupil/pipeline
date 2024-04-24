@@ -56,12 +56,12 @@ do_bad_channel_removal =            False
 do_bad_channel_check =              False
 do_filter_figures_by_subject =      False
 do_filter_figures_by_condition =    False
-do_resnet_image_conversion =        False
+do_resnet_image_conversion =        True
 do_filter_by_subject =              True
 do_cnn_pac =                        False
-do_resnet_pac_regularization =      False
+do_resnet_pac_regularization =      True
 do_resnet_pac =                     False
-resnet_to_logistic =                True
+resnet_to_logistic =                False
 
 
 # PARAMETERS
@@ -1717,8 +1717,8 @@ if do_filter_by_subject:
     
     which_dx = 'AUD' # AUD ALAB ALD
     sex = '' # M F
-    min_age = 20
-    max_age = 50 
+    min_age = 0
+    max_age = 99 
     race = ''
     flat_cut = 0 # MAXIMUM DURATION IN SECONDS OF FLAT INTERVAL IN EEG SIGNAL (<5uV)
     noise_cut = 0 # MAXIMUM DURATION IN SECONDS OF NOISE INTERVAL IN EEG SIGNAL (>100uV)
@@ -1886,8 +1886,8 @@ if do_cnn_pac:
 
     which_dx = 'AUD' # AUD ALAB ALD
     sex = ''
-    min_age = 20
-    max_age = 50 
+    min_age = 0
+    max_age = 99 
     race = ''
     flat_cut = 0 # MAXIMUM DURATION IN SECONDS OF FLAT INTERVAL IN EEG SIGNAL (<5uV)
     noise_cut = 0 # MAXIMUM DURATION IN SECONDS OF NOISE INTERVAL IN EEG SIGNAL (>100uV)
@@ -2036,7 +2036,7 @@ if do_cnn_pac:
         coga_model.save(base_dir + 'MODEL_' + targ_folder + '.keras')
         
         
-    title_str+= ' N=' + N_str + ' alc=' + alc + '% lr=' + str(learning_rate) + ' pool=' + pooling
+    title_str+= ' N=' + N_str + ' alc=' + alc + '% lr=' + str(learning_rate) 
     fn = title_str.replace('(','')
     fn = fn.replace(')','')
     fn = fn.replace('=','_')
