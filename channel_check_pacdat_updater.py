@@ -6,37 +6,39 @@ Created on Thu Apr  4 16:19:05 2024
 """
 
 import os 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+# import matplotlib.pyplot as plt
 
-epoch_dur = 30 # how many seconds in each epoch
+
 # TIME POINTS IN A ROW THAT MISS AMPLITUDE CUTOFFS
-slip_f_cutoff = 1 # FOR FLATNESS (intervals of below 5uV diff)
-slip_n_cutoff = 1 # FOR NOISINESS (intervals continuously above 100uV diff)
+slip_f_cutoff = 0 # FOR FLATNESS (intervals of below 5uV diff)
+slip_n_cutoff = 0 # FOR NOISINESS (intervals continuously above 100uV diff)
 flat_threshold = 0.000005 # STANDARD 5 uV
 noise_threshold = 0.000100 # STANDARD 100 uV
-
-read_dir = "D:\\COGA_eec\\"
-write_dir = "D:\\COGA_eec\\"
-sub_dir = 'cleaned_data'
-
-#read_dir = "/ddn/crichard/eeg_csv/"
-#write_dir = "/ddn/crichard/pipeline/processed/"
-# read_dir = os.environ['TMPDIR'] + '/input/'
-# write_dir = os.environ['TMPDIR'] + '/results/'
+sub_dir = 'FZ/' # cleaned_data FZ
 which_pacdat = 'pacdat_MASTER.pkl'
 
+# csv_dir = "D:\\COGA_eec\\"
+# pac_dir = "D:\\COGA_eec\\"
+csv_dir = "/ddn/crichard/eeg_csv/"
+pac_dir = "/ddn/crichard/eeg_csv/pacdat/"
 
-pacdat = pd.read_pickle(read_dir + which_pacdat)
+
+pacdat = pd.read_pickle(pac_dir + which_pacdat)
+pacdat.insert(4,'max_flat_slip'+str(slip_f_cutoff), np.ones(len(pacdat))*99999)
+pacdat.insert(4,'perc_flat_slip'+str(slip_f_cutoff), np.ones(len(pacdat))*99999)
+pacdat.insert(4,'N_flat_slip'+str(slip_f_cutoff), np.ones(len(pacdat))*99999)
+pacdat.insert(4,'avg_flat_slip'+str(slip_f_cutoff), np.ones(len(pacdat))*99999)
+pacdat.insert(4,'max_noise_slip'+str(slip_n_cutoff), np.ones(len(pacdat))*99999)  
+pacdat.insert(4,'perc_noise_slip'+str(slip_n_cutoff), np.ones(len(pacdat))*99999) 
+pacdat.insert(4,'avg_noise_slip'+str(slip_n_cutoff), np.ones(len(pacdat))*99999) 
+pacdat.insert(4,'N_noise_slip'+str(slip_n_cutoff), np.ones(len(pacdat))*99999) 
+# pacdat.insert(2,'max_flat', np.zeros(len(pacdat)))
 # pacdat.insert(11,'sample_rate', np.zeros(len(pacdat)))
 # pacdat.insert(2,'max_noise', np.zeros(len(pacdat)))
-# pacdat.insert(4,'max_noise_slip'+str(slip_n_cutoff), np.zeros(len(pacdat))) 
-pacdat.insert(4,'perc_noise_slip'+str(slip_n_cutoff), np.ones(len(pacdat))*99999) 
-pacdat.insert(4,'max_flat_slip'+str(slip_n_cutoff), np.ones(len(pacdat))*99999)
-pacdat.insert(4,'perc_flat_slip'+str(slip_n_cutoff), np.ones(len(pacdat))*99999)
-# pacdat.insert(2,'max_flat', np.zeros(len(pacdat)))
 
+        
 ftot = str(len(pacdat[pacdat.channel=='FZ']))
 fcnt = 0
 
@@ -50,7 +52,7 @@ for r in range(ri,len(pacdat)):
         pacdat.at[r,'sample_rate'] = sample_rate
         thisFileName = pacdat.iloc[r].eeg_file_name
         
-        thisPathFileName = read_dir + sub_dir + '\\' + thisFileName + '.csv'        
+        thisPathFileName = csv_dir + sub_dir + '\\' + thisFileName + '.csv'        
         if os.path.exists(thisPathFileName):
             fcnt += 1 
             eeg_signal = np.loadtxt(thisPathFileName, delimiter=',', skiprows=1)
@@ -64,20 +66,33 @@ for r in range(ri,len(pacdat)):
         seg_b = np.insert(eeg_signal,0,0)
         uv_diff = abs(seg_a - seg_b)
 
+        # len_good = len(uv_diff[((uv_diff>=0.000005) & (uv_diff<=0.000100))])
+        # if len_good == len(uv_diff):
+        #     # INSERT CODE TO ENTER APPROPRIATE VALUES INTO pacdat 
+        #     # BEFORE SKIPPING THIS FILE BECAUSE NO POINT IN PROCESSING 
+        #     # IF ABOVE IS TRUE
+        #     print('WHAT THE WHAT??!! THERE\' S ACTUALLY A PERFECT SIGNAL??n\ ')
+        #     pacdat.at[r,'perc_flat_slip'+str(slip_f_cutoff)] = 0            
+        #     pacdat.at[r,'max_flat_slip'+str(slip_f_cutoff)] = 0
+            
+        #     continue
+        
+        
         # CURRENT LENGTH OF LOW AMPLITUDE (FLAT) INTERVAL (CONSECUTIVE SAMPLES MEETING FLAT CRITERION)
         flat_interval = 0 
         # ARRAY CONTAINING LENGTHS OF ALL FLAT AMPLITUDE INTERVALS IN SIGNAL
         flat_intervals = np.array([0])
+        # KEEPS TRACK OF HOW MANY SAMPLES IN A ROW HAVE NOT BEEN FLAT
+        slip_f = 0
+        
         
         # CURRENT LENGTH OF HIGH AMPLITUDE INTERVAL (CONSECUTIVE SAMPLES MEETING NOISE CRITERION)
         noise_interval = 0 
         # ARRAY CONTAINING LENGTHS OF ALL HIGH AMPLITUDE INTERVALS IN SIGNAL
         noise_intervals = np.array([0])
-        
-        # KEEPS TRACK OF HOW MANY SAMPLES IN A ROW HAVE NOT BEEN FLAT
-        slip_f = 0
         # KEEPS TRACK OF HOW MANY SAMPLES IN A ROW HAVE NOT BEEN NOISY
         slip_n = 0
+        
         
         for t in range(0,len(uv_diff)-1):
             this_t = uv_diff[t]
@@ -104,20 +119,32 @@ for r in range(ri,len(pacdat)):
                 else:
                     slip_n += 1  
                     
+        perc_flat = 100*(flat_intervals.sum()/len(uv_diff))
+        pacdat.at[r,'perc_flat_slip'+str(slip_f_cutoff)] = perc_flat
+        pacdat.at[r,'N_flat_slip'+str(slip_f_cutoff)] = len(flat_intervals)
         flat_intervals = flat_intervals/sample_rate
         pacdat.at[r,'max_flat_slip'+str(slip_f_cutoff)] = max(flat_intervals)
-        pacdat.at[r,'perc_flat_slip'+str(slip_f_cutoff)] = (sum(noise_intervals)/len(uv_diff))*100
-
-        noise_intervals = noise_intervals/sample_rate
-        # pacdat.at[r,'max_noise_slip'+str(slip_n_cutoff)] = max(noise_intervals)
-        pacdat.at[r,'perc_noise_slip'+str(slip_n_cutoff)] = max(noise_intervals)
+        pacdat.at[r,'avg_flat_slip'+str(slip_f_cutoff)] = np.mean(flat_intervals)
+        pacdat.at[r,'N_flat_slip'+str(slip_f_cutoff)] = len(flat_intervals)
         
-pacdat.to_pickle(read_dir + which_pacdat)
+        perc_noise = 100*(noise_intervals.sum()/len(uv_diff))
+        pacdat.at[r,'perc_noise_slip'+str(slip_n_cutoff)] = perc_noise
+        pacdat.at[r,'N_noise_slip'+str(slip_n_cutoff)] = len(noise_intervals)
+        noise_intervals = noise_intervals/sample_rate
+        pacdat.at[r,'max_noise_slip'+str(slip_n_cutoff)] = max(noise_intervals)
+        pacdat.at[r,'avg_noise_slip'+str(slip_n_cutoff)] = np.mean(noise_intervals)
+        pacdat.at[r,'N_noise_slip'+str(slip_n_cutoff)] = len(noise_intervals)
+        
+pacdat.to_pickle(pac_dir + which_pacdat)
 
 # fz = pacdat[(pacdat.channel=='FZ') & (pacdat.max_flat>0)]
 # fz = pacdat[(pacdat.channel=='FZ') & (pacdat.max_noise>0)]
 # fz = pacdat[(pacdat.channel=='FZ') & (pacdat.max_noise>0) & (pacdat.max_flat>0)]
-fz = pacdat[(pacdat.channel=='FZ')]
+# fz = pacdat[(pacdat.channel=='FZ')]
 # fz[['max_flat']].plot.hist(bins=10,xlabel='seconds', title='Duration of maximum flat interval\n(by EEG channel)',logy=True)
 # fz[['max_noise']].plot.hist(bins=10,xlabel='seconds', title='Duration of maximum noise interval\n(by EEG channel)',logy=True)
-fz[['max_noise_slip1']].plot.hist(bins=10,xlabel='seconds', title='Duration of maximum noise interval with slip1\n(by EEG channel from eec)',logy=True)
+# fz[['max_flat_slip1']].plot.hist(bins=50,xlabel='seconds', title='Max duration of flat interval with slip1\n(by EEG channel from eec)',logy=False)
+# fz[['perc_flat_slip1']].plot.hist(bins=50,xlabel='percentage', title='Percent flat interval with slip1\n(by EEG channel from eec)',logy=True)
+
+# ss = list(set(fz.site))
+# for i in range(0,len(ss)): print(ss[i]+' '+ str(len(fz[(fz.max_flat_slip1<25) & (fz.site==ss[i])])))
