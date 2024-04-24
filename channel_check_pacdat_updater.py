@@ -29,14 +29,41 @@ pac_dir = os.environ['TMPDIR'] + '/input/'
 
 
 pacdat = pd.read_pickle(pac_dir + which_pacdat)
-pacdat.insert(4,'max_flat_slip'+str(slip_f_cutoff), np.ones(len(pacdat))*99999)
-pacdat.insert(4,'perc_flat_slip'+str(slip_f_cutoff), np.ones(len(pacdat))*99999)
-pacdat.insert(4,'N_flat_slip'+str(slip_f_cutoff), np.ones(len(pacdat))*99999)
-pacdat.insert(4,'avg_flat_slip'+str(slip_f_cutoff), np.ones(len(pacdat))*99999)
-pacdat.insert(4,'max_noise_slip'+str(slip_n_cutoff), np.ones(len(pacdat))*99999)  
-pacdat.insert(4,'perc_noise_slip'+str(slip_n_cutoff), np.ones(len(pacdat))*99999) 
-pacdat.insert(4,'avg_noise_slip'+str(slip_n_cutoff), np.ones(len(pacdat))*99999) 
-pacdat.insert(4,'N_noise_slip'+str(slip_n_cutoff), np.ones(len(pacdat))*99999) 
+
+if not(any([c=='max_flat_slip'+str(slip_f_cutoff) for c in pacdat.columns])):
+    # pacdat.insert(4,'max_flat_slip'+str(slip_f_cutoff), np.ones(len(pacdat))*99999)
+    pacdat[['max_flat_slip'+str(slip_f_cutoff)]] = np.ones(len(pacdat))*99999
+    
+if not(any([c=='perc_flat_slip'+str(slip_f_cutoff) for c in pacdat.columns])):    
+    # pacdat.insert(4,'perc_flat_slip'+str(slip_f_cutoff), np.ones(len(pacdat))*99999)
+    pacdat[['perc_flat_slip'+str(slip_f_cutoff)]] = np.ones(len(pacdat))*99999
+
+if not(any([c=='N_flat_slip'+str(slip_f_cutoff) for c in pacdat.columns])):
+    # pacdat.insert(4,'N_flat_slip'+str(slip_f_cutoff), np.ones(len(pacdat))*99999)
+    pacdat[['N_flat_slip'+str(slip_f_cutoff)]] = np.ones(len(pacdat))*99999
+    
+if not(any([c=='avg_flat_slip'+str(slip_f_cutoff) for c in pacdat.columns])):
+    # pacdat.insert(4,'avg_flat_slip'+str(slip_f_cutoff), np.ones(len(pacdat))*99999)
+    pacdat[['avg_flat_slip'+str(slip_f_cutoff)]] = np.ones(len(pacdat))*99999
+    
+    
+if not(any([c=='max_noise_slip'+str(slip_n_cutoff) for c in pacdat.columns])):
+    # pacdat.insert(4,'max_noise_slip'+str(slip_n_cutoff), np.ones(len(pacdat))*99999)  
+    pacdat[['max_noise_slip'+str(slip_n_cutoff)]] = np.ones(len(pacdat))*99999
+    
+if not(any([c=='perc_noise_slip'+str(slip_n_cutoff) for c in pacdat.columns])):
+    # pacdat.insert(4,'perc_noise_slip'+str(slip_n_cutoff), np.ones(len(pacdat))*99999) 
+    pacdat[['perc_noise_slip'+str(slip_n_cutoff)]] = np.ones(len(pacdat))*99999
+    
+if not(any([c=='avg_noise_slip'+str(slip_n_cutoff) for c in pacdat.columns])):
+    # pacdat.insert(4,'avg_noise_slip'+str(slip_n_cutoff), np.ones(len(pacdat))*99999) 
+    pacdat[['avg_noise_slip'+str(slip_n_cutoff)]] = np.ones(len(pacdat))*99999
+    
+if not(any([c=='N_noise_slip'+str(slip_n_cutoff) for c in pacdat.columns])):
+    # pacdat.insert(4,'N_noise_slip'+str(slip_n_cutoff), np.ones(len(pacdat))*99999) 
+    pacdat[['N_noise_slip'+str(slip_n_cutoff)]] = np.ones(len(pacdat))*99999
+    
+    
 # pacdat.insert(2,'max_flat', np.zeros(len(pacdat)))
 # pacdat.insert(11,'sample_rate', np.zeros(len(pacdat)))
 # pacdat.insert(2,'max_noise', np.zeros(len(pacdat)))
@@ -55,7 +82,8 @@ for r in range(ri,len(pacdat)):
         pacdat.at[r,'sample_rate'] = sample_rate
         thisFileName = pacdat.iloc[r].eeg_file_name
         
-        thisPathFileName = csv_dir + sub_dir + '\\' + thisFileName + '.csv'        
+        # thisPathFileName = csv_dir + sub_dir + '\\' + thisFileName + '.csv'        
+        thisPathFileName = csv_dir + sub_dir + '/' + thisFileName + '.csv'        
         if os.path.exists(thisPathFileName):
             fcnt += 1 
             eeg_signal = np.loadtxt(thisPathFileName, delimiter=',', skiprows=1)

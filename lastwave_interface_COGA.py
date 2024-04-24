@@ -56,8 +56,8 @@ do_bad_channel_removal =            False
 do_bad_channel_check =              False
 do_filter_figures_by_subject =      False
 do_filter_figures_by_condition =    False
-do_resnet_image_conversion =        True
-do_filter_by_subject =              True
+do_resnet_image_conversion =        False
+do_filter_by_subject =              False
 do_cnn_pac =                        False
 do_resnet_pac_regularization =      True
 do_resnet_pac =                     False
@@ -1684,7 +1684,7 @@ if do_resnet_image_conversion:
 
     whichEEGfileExtention = 'jpg'
     # read_dir = 'C:\\Users\\lifep\\OneDrive\\Desktop\\processed_new\\'
-    read_dir = 'D:\\COGA_eec\\processed\\' 
+    read_dir = 'D:\\COGA_eec\\new_pac\\' 
     write_dir = 'D:\\COGA_eec\\new_pac\\' 
 
     # fl_alc = csd.get_file_list(base_dir + 'alcoholic\\', whichEEGfileExtention)
@@ -1728,7 +1728,7 @@ if do_filter_by_subject:
     channel = 'FZ'
     base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
     source_folder = 'new_pac' # eeg_figures new_pac
-    targ_folder = 'resnet_by_subj_d_' + str(min_age) + '_' + str(max_age) + '_' + which_dx + '_flat' + str(flat_cut) + '_noise' + str(noise_cut) + '_' + sex
+    targ_folder = 'resnet_by_subj_e_' + str(min_age) + '_' + str(max_age) + '_' + which_dx + '_flat' + str(flat_cut) + '_noise' + str(noise_cut) + '_' + sex
     whichEEGfileExtention = 'jpg' # png jpg
     which_pacdat = 'pacdat_MASTER.pkl'
 
@@ -1864,219 +1864,13 @@ if do_filter_by_subject:
             
 
 
-
-if do_cnn_pac:
-    
-    import matplotlib.pyplot as plotter_lib
-    import numpy as np
-    from PIL import Image
-    import tensorflow as tf
-    from tensorflow.keras.layers import BatchNormalization, Input, GlobalAveragePooling2D, Flatten, Dropout, Conv2D, MaxPooling2D
-    from keras.layers.core import Dense
-    from keras.applications.resnet import preprocess_input
-    from keras.models import Model
-
-    from tensorflow.keras.models import Sequential
-    from tensorflow.keras.optimizers import Adam
-    from tensorflow.keras.layers.experimental.preprocessing import Rescaling
-    from tensorflow.keras import regularizers
-    from sklearn.model_selection import KFold
-    from sklearn.model_selection import train_test_split
-
-
-    which_dx = 'AUD' # AUD ALAB ALD
-    sex = ''
-    min_age = 0
-    max_age = 99 
-    race = ''
-    flat_cut = 0 # MAXIMUM DURATION IN SECONDS OF FLAT INTERVAL IN EEG SIGNAL (<5uV)
-    noise_cut = 0 # MAXIMUM DURATION IN SECONDS OF NOISE INTERVAL IN EEG SIGNAL (>100uV)
-
-    
-    # DEEP LEARNING MODEL
-    learning_rate = .00001
-    img_height,img_width=224,224
-    batch_size=32
-    epochs=100
-    
-    include_top = False
-    save_resnet_model = False
-    
-    # REGULARIZATION
-    # Define L2 regularization factor
-    alpha = .0001
-    # USING KFold TO DO CROSS-VALIDATION
-    # n_splits = 2 
-
-    # PATHS AND DATA INFO
-    base_dir = 'D:\\COGA_eec\\'
-    targ_folder = 'resnet_by_subj_d_20_50_AUD_flat0_noise0_' # 'resnet_by_subj_20_40_cAUD_flat20_noise5'
-    whichEEGfileExtention = 'jpg'
-    data_str = 'FZ' # PAC@FZ chanxHz
-    
-    
-    title_str = 'rn50 d-RSV L2 alpha=' + str(alpha) + ' ' + which_dx + ' ' + sex +  ' Age ' + str(min_age) + '-' + str(max_age) + ' f' + str(flat_cut) + 'n' + str(noise_cut) 
-    pth = base_dir + targ_folder + '\\'
-    fl = csd.get_file_list(pth, whichEEGfileExtention)    
-    fl_alc = csd.get_file_list(pth + 'alcoholic\\', whichEEGfileExtention)
-    alc = str(round((len(fl_alc)/len(fl))*100,1))
-    N_str = str(len(fl))
-
-    # LISTS TO HOLD ACCURACY AND LOSS FUNCTION VALUES FOR PLOTTING
-    t_acc = []
-    v_acc = []
-    t_loss = []
-    v_loss = []
-    
-    # INPUT DATA AND LABELS TO PASS THROUGH KFold FUNCTION
-    images = []
-    labels = []
-    for dx in ['alcoholic', 'nonalcoholic']:
-        file_list = csd.get_file_list(pth + dx + '\\', whichEEGfileExtention)
-        for i in file_list:
-            img = Image.open(i[0] + i[1])
-            img_array = np.array(img)
-            img_array = preprocess_input(img_array)
-            images.append(img_array)
-            labels.append(dx)
-    labels = np.array(labels)            
-    labels[labels=='alcoholic'] = 1
-    labels[labels=='nonalcoholic'] = 0
-    labels = labels.astype(int)
-    
-    images = np.array(images)      
-    labels = np.array(labels)      
-    
-    # kf = KFold(n_splits=n_splits, shuffle=True)    
-    # for train_index, val_index in kf.split(images):
-    #     X_train, X_val = images[train_index], images[val_index]
-    #     y_train, y_val = labels[train_index], labels[val_index]
-    
-    X_train, X_val, y_train, y_val = train_test_split(images, labels, test_size=0.2, random_state=42)
-
-  
-    # # rn = tf.keras.applications.ResNet152(
-    # rn = tf.keras.applications.ResNet50(
-    #     include_top=include_top,
-    #     input_shape=(img_height, img_width,3),
-    #     pooling=pooling,
-    #     classes=2,
-    #     weights='imagenet') # imagenet or None
-
-    # rn.trainable = False
-
-    # # Add L2 regularization to each convolutional and dense layer
-    # for layer in rn.layers:
-    #     # if isinstance(layer, tf.keras.layers.Conv2D) or isinstance(layer, tf.keras.layers.Dense):
-    #     if isinstance(layer, tf.keras.layers.Dense):
-    #         layer.kernel_regularizer = regularizers.l2(alpha)
-    #         if layer.use_bias:
-    #             layer.bias_regularizer = regularizers.l2(alpha)
-
-    # rn_partial = tf.keras.Model(inputs = rn.input, outputs = rn.layers[18].output)
-    # output = rn_partial.output
-    # predictions = Dense(1, activation='sigmoid')(output)
-    # coga_model = tf.keras.Model(inputs = rn_partial.input, outputs = predictions)
-    
-    # coga_model = Sequential()
-    # # coga_model.add(rn)
-    # # coga_model.add(GlobalAveragePooling2D())
-    # coga_model.add(Flatten())
-    # coga_model.add(Dense(1024, activation='relu', kernel_regularizer=regularizers.l2(alpha)))
-    # coga_model.add(Dense(1, activation='sigmoid', kernel_regularizer=regularizers.l2(alpha)))
-
-
-    coga_model = Sequential()
-    coga_model.add(Conv2D(32, (3, 3), activation='relu', input_shape=(img_height,img_width, 3)))
-    coga_model.add(MaxPooling2D((2, 2)))
-    coga_model.add(Conv2D(64, (3, 3), activation='relu'))
-    coga_model.add(MaxPooling2D((2, 2)))
-    coga_model.add(Conv2D(64, (3, 3), activation='relu'))
-    coga_model.add(BatchNormalization())
-    # coga_model.add(Flatten())
-    
-    coga_model.add(Dense(64, activation='relu'))
-    coga_model.add(Dense(64, activation='relu'))
-    coga_model.add(Dense(1, activation='sigmoid'))
-
-
-
-    coga_model = Sequential()
-    coga_model.add(Conv2D(32, (3, 3), activation='relu', input_shape=(img_height,img_width, 3)))
-    coga_model.add(MaxPooling2D((2, 2)))
-    coga_model.add(Conv2D(64, (3, 3), activation='relu'))
-    coga_model.add(MaxPooling2D((2, 2)))
-    coga_model.add(Conv2D(64, (3, 3), activation='relu'))
-    coga_model.add(BatchNormalization())   
-    coga_model.add(Dense(64, activation='relu'))
-    coga_model.add(Dense(64, activation='relu'))
-    coga_model.add(Dense(1, activation='sigmoid'))
-
-
-
-    coga_model.compile(optimizer=Adam(learning_rate=learning_rate),
-                       loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
-                       metrics=['accuracy'])
-    
-    
-    history = coga_model.fit(X_train, 
-                             y_train,
-                             validation_data=(X_val, y_val), 
-                             epochs=epochs,
-                             batch_size=batch_size,
-                             verbose=1)
-    t_acc = history.history['accuracy']
-    v_acc = history.history['val_accuracy']
-    t_loss = history.history['loss']
-    v_loss = history.history['val_loss']
-        
-    
-    # SAVE THIS MODEL
-    if save_resnet_model:
-        coga_model.save(base_dir + 'MODEL_' + targ_folder + '.keras')
-        
-        
-    title_str+= ' N=' + N_str + ' alc=' + alc + '% lr=' + str(learning_rate) 
-    fn = title_str.replace('(','')
-    fn = fn.replace(')','')
-    fn = fn.replace('=','_')
-    fn = fn.strip() + '.jpg'
-
-    epochs_range= range(epochs)
-    
-    plotter_lib.figure(figsize=(8, 8))
-    plotter_lib.plot(epochs_range, t_acc, label="Training Accuracy")
-    plotter_lib.plot(epochs_range, v_acc, label="Validation Accuracy")
-    plotter_lib.axis(ymin=0.4,ymax=1.09)
-    plotter_lib.grid()
-    plotter_lib.title(data_str + ' ' + title_str)
-    plotter_lib.ylabel('Accuracy')
-    plotter_lib.xlabel('Epochs')
-    plotter_lib.legend(['train', 'validation'])    
-    
-    plotter_lib.figure(figsize=(8, 8))
-    plotter_lib.plot(epochs_range, t_loss, label="Training Loss")
-    plotter_lib.plot(epochs_range, v_loss, label="Validation Loss")
-    plotter_lib.axis(ymin=0,ymax=max(v_loss))
-    plotter_lib.grid()
-    plotter_lib.title(data_str + ' ' + title_str)
-    plotter_lib.ylabel('Loss')
-    plotter_lib.xlabel('Epochs')
-    plotter_lib.legend(['train', 'validation'])  
-    
-    
-    
-    
-    
 if do_resnet_pac_regularization:
     
     import matplotlib.pyplot as plotter_lib
     import numpy as np
     from PIL import Image
     import tensorflow as tf
-    from tensorflow.keras.layers import BatchNormalization, Input, GlobalAveragePooling2D, Flatten, Dropout
     from keras.layers.core import Dense
-    from keras.applications.resnet import preprocess_input
     from keras.models import Model
 
     from tensorflow.keras.models import Sequential
@@ -2087,21 +1881,25 @@ if do_resnet_pac_regularization:
     from sklearn.model_selection import train_test_split
 
 
+    from keras.applications.resnet import preprocess_input
+    from tensorflow.keras.layers import BatchNormalization, Input, GlobalAveragePooling2D, Flatten, Dropout
+
+
     which_dx = 'AUD' # AUD ALAB ALD
-    sex = ''
-    min_age = 20
-    max_age = 50 
+    sex = '' # M F
+    min_age = 0
+    max_age = 99 
     race = ''
     flat_cut = 0 # MAXIMUM DURATION IN SECONDS OF FLAT INTERVAL IN EEG SIGNAL (<5uV)
     noise_cut = 0 # MAXIMUM DURATION IN SECONDS OF NOISE INTERVAL IN EEG SIGNAL (>100uV)
-
-    
+        
+        
     # DEEP LEARNING MODEL
     learning_rate = .0001
     pooling = 'avg'
     img_height,img_width=224,224
     batch_size=32
-    epochs=100
+    epochs=10
     
     include_top = False
     save_resnet_model = False
@@ -2114,12 +1912,13 @@ if do_resnet_pac_regularization:
 
     # PATHS AND DATA INFO
     base_dir = 'D:\\COGA_eec\\'
-    targ_folder = 'resnet_by_subj_d_20_50_AUD_flat0_noise0_' # 'resnet_by_subj_20_40_cAUD_flat20_noise5'
+    targ_folder = 'resnet_by_subj_e_0_99_AUD_flat0_noise0_' # 'resnet_by_subj_20_40_cAUD_flat20_noise5'
     whichEEGfileExtention = 'jpg'
     data_str = 'FZ' # PAC@FZ chanxHz
     
     
-    title_str = 'rn50 d-RSV L2 alpha=' + str(alpha) + ' ' + which_dx + ' ' + sex +  ' Age ' + str(min_age) + '-' + str(max_age) + ' f' + str(flat_cut) + 'n' + str(noise_cut) 
+    # title_str = 'rn50 d-RSV L2 alpha=' + str(alpha) + ' ' + which_dx + ' ' + sex +  ' Age ' + str(min_age) + '-' + str(max_age) + ' f' + str(flat_cut) + 'n' + str(noise_cut) 
+    title_str = 'rn50 d-RSV' + ' ' + which_dx + ' ' + sex +  ' Age ' + str(min_age) + '-' + str(max_age) + ' f' + str(flat_cut) + 'n' + str(noise_cut) 
     pth = base_dir + targ_folder + '\\'
     fl = csd.get_file_list(pth, whichEEGfileExtention)    
     fl_alc = csd.get_file_list(pth + 'alcoholic\\', whichEEGfileExtention)
@@ -2169,21 +1968,23 @@ if do_resnet_pac_regularization:
 
     rn.trainable = False
 
-    # Add L2 regularization to each convolutional and dense layer
-    for layer in rn.layers:
-        # if isinstance(layer, tf.keras.layers.Conv2D) or isinstance(layer, tf.keras.layers.Dense):
-        if isinstance(layer, tf.keras.layers.Dense):
-            layer.kernel_regularizer = regularizers.l2(alpha)
-            if layer.use_bias:
-                layer.bias_regularizer = regularizers.l2(alpha)
+    # # Add L2 regularization to each convolutional and dense layer
+    # for layer in rn.layers:
+    #     if isinstance(layer, tf.keras.layers.Conv2D) or isinstance(layer, tf.keras.layers.Dense):
+    #     # if isinstance(layer, tf.keras.layers.Dense):
+    #         layer.kernel_regularizer = regularizers.l2(alpha)
+    #         if layer.use_bias:
+    #             layer.bias_regularizer = regularizers.l2(alpha)
 
 
     coga_model = Sequential()
     coga_model.add(rn)
     # coga_model.add(GlobalAveragePooling2D())
     coga_model.add(Flatten())
-    coga_model.add(Dense(1024, activation='relu', kernel_regularizer=regularizers.l2(alpha)))
-    coga_model.add(Dense(1, activation='sigmoid', kernel_regularizer=regularizers.l2(alpha)))
+    # coga_model.add(Dense(1024, activation='relu', kernel_regularizer=regularizers.l2(alpha)))
+    # coga_model.add(Dense(1, activation='sigmoid', kernel_regularizer=regularizers.l2(alpha)))
+    coga_model.add(Dense(1024, activation='relu'))
+    coga_model.add(Dense(1, activation='sigmoid'))
 
 
     coga_model.compile(optimizer=Adam(learning_rate=learning_rate),
@@ -2604,6 +2405,224 @@ if resnet_to_logistic:
     
     # Print a classification report
     print(classification_report(y_val, predictions))    
+    
+    
+    
+
+
+
+
+
+
+
+
+if do_cnn_pac:
+    
+    import matplotlib.pyplot as plotter_lib
+    import numpy as np
+    from PIL import Image
+    import tensorflow as tf
+    from tensorflow.keras.layers import BatchNormalization, Input, GlobalAveragePooling2D, Flatten, Dropout, Conv2D, MaxPooling2D
+    from keras.layers.core import Dense
+    from keras.applications.resnet import preprocess_input
+    from keras.models import Model
+
+    from tensorflow.keras.models import Sequential
+    from tensorflow.keras.optimizers import Adam
+    from tensorflow.keras.layers.experimental.preprocessing import Rescaling
+    from tensorflow.keras import regularizers
+    from sklearn.model_selection import KFold
+    from sklearn.model_selection import train_test_split
+
+
+    which_dx = 'AUD' # AUD ALAB ALD
+    sex = ''
+    min_age = 0
+    max_age = 99 
+    race = ''
+    flat_cut = 0 # MAXIMUM DURATION IN SECONDS OF FLAT INTERVAL IN EEG SIGNAL (<5uV)
+    noise_cut = 0 # MAXIMUM DURATION IN SECONDS OF NOISE INTERVAL IN EEG SIGNAL (>100uV)
+
+    
+    # DEEP LEARNING MODEL
+    learning_rate = .00001
+    img_height,img_width=224,224
+    batch_size=32
+    epochs=100
+    
+    include_top = False
+    save_resnet_model = False
+    
+    # REGULARIZATION
+    # Define L2 regularization factor
+    alpha = .0001
+    # USING KFold TO DO CROSS-VALIDATION
+    # n_splits = 2 
+
+    # PATHS AND DATA INFO
+    base_dir = 'D:\\COGA_eec\\'
+    targ_folder = 'resnet_by_subj_d_20_50_AUD_flat0_noise0_' # 'resnet_by_subj_20_40_cAUD_flat20_noise5'
+    whichEEGfileExtention = 'jpg'
+    data_str = 'FZ' # PAC@FZ chanxHz
+    
+    
+    title_str = 'rn50 d-RSV L2 alpha=' + str(alpha) + ' ' + which_dx + ' ' + sex +  ' Age ' + str(min_age) + '-' + str(max_age) + ' f' + str(flat_cut) + 'n' + str(noise_cut) 
+    pth = base_dir + targ_folder + '\\'
+    fl = csd.get_file_list(pth, whichEEGfileExtention)    
+    fl_alc = csd.get_file_list(pth + 'alcoholic\\', whichEEGfileExtention)
+    alc = str(round((len(fl_alc)/len(fl))*100,1))
+    N_str = str(len(fl))
+
+    # LISTS TO HOLD ACCURACY AND LOSS FUNCTION VALUES FOR PLOTTING
+    t_acc = []
+    v_acc = []
+    t_loss = []
+    v_loss = []
+    
+    # INPUT DATA AND LABELS TO PASS THROUGH KFold FUNCTION
+    images = []
+    labels = []
+    for dx in ['alcoholic', 'nonalcoholic']:
+        file_list = csd.get_file_list(pth + dx + '\\', whichEEGfileExtention)
+        for i in file_list:
+            img = Image.open(i[0] + i[1])
+            img_array = np.array(img)
+            img_array = preprocess_input(img_array)
+            images.append(img_array)
+            labels.append(dx)
+    labels = np.array(labels)            
+    labels[labels=='alcoholic'] = 1
+    labels[labels=='nonalcoholic'] = 0
+    labels = labels.astype(int)
+    
+    images = np.array(images)      
+    labels = np.array(labels)      
+    
+    # kf = KFold(n_splits=n_splits, shuffle=True)    
+    # for train_index, val_index in kf.split(images):
+    #     X_train, X_val = images[train_index], images[val_index]
+    #     y_train, y_val = labels[train_index], labels[val_index]
+    
+    X_train, X_val, y_train, y_val = train_test_split(images, labels, test_size=0.2, random_state=42)
+
+  
+    # # rn = tf.keras.applications.ResNet152(
+    # rn = tf.keras.applications.ResNet50(
+    #     include_top=include_top,
+    #     input_shape=(img_height, img_width,3),
+    #     pooling=pooling,
+    #     classes=2,
+    #     weights='imagenet') # imagenet or None
+
+    # rn.trainable = False
+
+    # # Add L2 regularization to each convolutional and dense layer
+    # for layer in rn.layers:
+    #     # if isinstance(layer, tf.keras.layers.Conv2D) or isinstance(layer, tf.keras.layers.Dense):
+    #     if isinstance(layer, tf.keras.layers.Dense):
+    #         layer.kernel_regularizer = regularizers.l2(alpha)
+    #         if layer.use_bias:
+    #             layer.bias_regularizer = regularizers.l2(alpha)
+
+    # rn_partial = tf.keras.Model(inputs = rn.input, outputs = rn.layers[18].output)
+    # output = rn_partial.output
+    # predictions = Dense(1, activation='sigmoid')(output)
+    # coga_model = tf.keras.Model(inputs = rn_partial.input, outputs = predictions)
+    
+    # coga_model = Sequential()
+    # # coga_model.add(rn)
+    # # coga_model.add(GlobalAveragePooling2D())
+    # coga_model.add(Flatten())
+    # coga_model.add(Dense(1024, activation='relu', kernel_regularizer=regularizers.l2(alpha)))
+    # coga_model.add(Dense(1, activation='sigmoid', kernel_regularizer=regularizers.l2(alpha)))
+
+
+    coga_model = Sequential()
+    coga_model.add(Conv2D(32, (3, 3), activation='relu', input_shape=(img_height,img_width, 3)))
+    coga_model.add(MaxPooling2D((2, 2)))
+    coga_model.add(Conv2D(64, (3, 3), activation='relu'))
+    coga_model.add(MaxPooling2D((2, 2)))
+    coga_model.add(Conv2D(64, (3, 3), activation='relu'))
+    coga_model.add(BatchNormalization())
+    # coga_model.add(Flatten())
+    
+    coga_model.add(Dense(64, activation='relu'))
+    coga_model.add(Dense(64, activation='relu'))
+    coga_model.add(Dense(1, activation='sigmoid'))
+
+
+
+    coga_model = Sequential()
+    coga_model.add(Conv2D(32, (3, 3), activation='relu', input_shape=(img_height,img_width, 3)))
+    coga_model.add(MaxPooling2D((2, 2)))
+    coga_model.add(Conv2D(64, (3, 3), activation='relu'))
+    coga_model.add(MaxPooling2D((2, 2)))
+    coga_model.add(Conv2D(64, (3, 3), activation='relu'))
+    coga_model.add(BatchNormalization())   
+    coga_model.add(Dense(64, activation='relu'))
+    coga_model.add(Dense(64, activation='relu'))
+    coga_model.add(Dense(1, activation='sigmoid'))
+
+
+
+    coga_model.compile(optimizer=Adam(learning_rate=learning_rate),
+                       loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
+                       metrics=['accuracy'])
+    
+    
+    history = coga_model.fit(X_train, 
+                             y_train,
+                             validation_data=(X_val, y_val), 
+                             epochs=epochs,
+                             batch_size=batch_size,
+                             verbose=1)
+    t_acc = history.history['accuracy']
+    v_acc = history.history['val_accuracy']
+    t_loss = history.history['loss']
+    v_loss = history.history['val_loss']
+        
+    
+    # SAVE THIS MODEL
+    if save_resnet_model:
+        coga_model.save(base_dir + 'MODEL_' + targ_folder + '.keras')
+        
+        
+    title_str+= ' N=' + N_str + ' alc=' + alc + '% lr=' + str(learning_rate) 
+    fn = title_str.replace('(','')
+    fn = fn.replace(')','')
+    fn = fn.replace('=','_')
+    fn = fn.strip() + '.jpg'
+
+    epochs_range= range(epochs)
+    
+    plotter_lib.figure(figsize=(8, 8))
+    plotter_lib.plot(epochs_range, t_acc, label="Training Accuracy")
+    plotter_lib.plot(epochs_range, v_acc, label="Validation Accuracy")
+    plotter_lib.axis(ymin=0.4,ymax=1.09)
+    plotter_lib.grid()
+    plotter_lib.title(data_str + ' ' + title_str)
+    plotter_lib.ylabel('Accuracy')
+    plotter_lib.xlabel('Epochs')
+    plotter_lib.legend(['train', 'validation'])    
+    
+    plotter_lib.figure(figsize=(8, 8))
+    plotter_lib.plot(epochs_range, t_loss, label="Training Loss")
+    plotter_lib.plot(epochs_range, v_loss, label="Validation Loss")
+    plotter_lib.axis(ymin=0,ymax=max(v_loss))
+    plotter_lib.grid()
+    plotter_lib.title(data_str + ' ' + title_str)
+    plotter_lib.ylabel('Loss')
+    plotter_lib.xlabel('Epochs')
+    plotter_lib.legend(['train', 'validation'])  
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     
     
