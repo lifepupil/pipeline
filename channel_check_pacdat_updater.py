@@ -18,7 +18,7 @@ flat_threshold = 0.000005 # STANDARD 5 uV
 noise_threshold = 0.000100 # STANDARD 100 uV
 sub_dir = '' # cleaned_data FZ
 
-which_pacdat = 'pacdat_MASTER.pkl'
+which_pacdat = 'pacdat_MASTER_bak.pkl'
 
 # csv_dir = "D:\\COGA_eec\\"
 # pac_dir = "D:\\COGA_eec\\"
@@ -129,22 +129,24 @@ for r in range(ri,len(pacdat)):
         for t in range(0,len(uv_diff)-1):
             this_t = uv_diff[t]
             
-            if this_t<= flat_threshold:
+            if this_t <= flat_threshold:
                 flat_interval += 1 
                 if slip_f>0:
                     slip_f -= 1
-            elif flat_interval>0:
+            # FLAT INTERVAL MUST BE GREATER THAN 4 SAMPLES IN DURATION
+            elif flat_interval > 4:
                 if slip_f == slip_f_cutoff:
                     flat_intervals = np.append(flat_intervals,flat_interval)
                     flat_interval = 0
                 else:
                     slip_f += 1
                     
-            if this_t>= noise_threshold:
+            if this_t >= noise_threshold:
                 noise_interval += 1 
                 if slip_n>0:
                     slip_n -= 1
-            elif noise_interval>0:
+            # NOISY INTERVAL MUST BE GREATER THAN 4 SAMPLES IN DURATION
+            elif noise_interval > 4:
                 if slip_n == slip_n_cutoff:
                     noise_intervals = np.append(noise_intervals,noise_interval)
                     noise_interval = 0
@@ -154,14 +156,17 @@ for r in range(ri,len(pacdat)):
         perc_flat = 100*(flat_intervals.sum()/len(uv_diff))
         pacdat.at[r,'perc_flat_slip'+str(slip_f_cutoff)] = perc_flat
         pacdat.at[r,'N_flat_slip'+str(slip_f_cutoff)] = len(flat_intervals)
+        
         flat_intervals = flat_intervals/sample_rate
         pacdat.at[r,'max_flat_slip'+str(slip_f_cutoff)] = max(flat_intervals)
         pacdat.at[r,'avg_flat_slip'+str(slip_f_cutoff)] = np.mean(flat_intervals)
         pacdat.at[r,'N_flat_slip'+str(slip_f_cutoff)] = len(flat_intervals)
         
+        
         perc_noise = 100*(noise_intervals.sum()/len(uv_diff))
         pacdat.at[r,'perc_noise_slip'+str(slip_n_cutoff)] = perc_noise
         pacdat.at[r,'N_noise_slip'+str(slip_n_cutoff)] = len(noise_intervals)
+        
         noise_intervals = noise_intervals/sample_rate
         pacdat.at[r,'max_noise_slip'+str(slip_n_cutoff)] = max(noise_intervals)
         pacdat.at[r,'avg_noise_slip'+str(slip_n_cutoff)] = np.mean(noise_intervals)
@@ -172,11 +177,11 @@ pacdat.to_pickle(pac_dir + which_pacdat)
 # fz = pacdat[(pacdat.channel=='FZ') & (pacdat.max_flat>0)]
 # fz = pacdat[(pacdat.channel=='FZ') & (pacdat.max_noise>0)]
 # fz = pacdat[(pacdat.channel=='FZ') & (pacdat.max_noise>0) & (pacdat.max_flat>0)]
-# fz = pacdat[(pacdat.channel=='FZ')]
-# fz[['max_flat']].plot.hist(bins=10,xlabel='seconds', title='Duration of maximum flat interval\n(by EEG channel)',logy=True)
-# fz[['max_noise']].plot.hist(bins=10,xlabel='seconds', title='Duration of maximum noise interval\n(by EEG channel)',logy=True)
-# fz[['max_flat_slip1']].plot.hist(bins=50,xlabel='seconds', title='Max duration of flat interval with slip1\n(by EEG channel from eec)',logy=True)
-# fz[['perc_flat_slip1']].plot.hist(bins=50,xlabel='percentage', title='Percent flat interval with slip1\n(by EEG channel from eec)',logy=True)
+fz = pacdat[(pacdat.channel=='FZ')]
+fz[['max_flat']].plot.hist(bins=50,xlabel='seconds', title='Duration of maximum flat interval\n(by EEG channel)',logy=True)
+fz[['max_noise']].plot.hist(bins=10,xlabel='seconds', title='Duration of maximum noise interval\n(by EEG channel)',logy=True)
+fz[['avg_flat_slip0']].plot.hist(bins=50,xlabel='seconds', title='Avg duration of flat interval with slip0\n(by EEG channel from eec)',logy=True)
+fz[['perc_flat_slip0']].plot.hist(bins=50,xlabel='percentage', title='Percent flat interval with slip1\n(by EEG channel from eec)',logy=True)
 
-# ss = list(set(fz.site))
-# for i in range(0,len(ss)): print(ss[i]+' '+ str(len(fz[(fz.max_flat==0) & (fz.site==ss[i])])))
+ss = list(set(fz.site))
+for i in range(0,len(ss)): print(ss[i]+' '+ str(len(fz[(fz.max_flat==0) & (fz.site==ss[i])])))
