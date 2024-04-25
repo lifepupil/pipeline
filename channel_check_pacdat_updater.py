@@ -18,7 +18,7 @@ flat_threshold = 0.000005 # STANDARD 5 uV
 noise_threshold = 0.000100 # STANDARD 100 uV
 sub_dir = '' # cleaned_data FZ
 
-which_pacdat = 'pacdat_MASTER_bak.pkl'
+which_pacdat = 'pacdat_MASTER.pkl'
 
 # csv_dir = "D:\\COGA_eec\\"
 # pac_dir = "D:\\COGA_eec\\"
