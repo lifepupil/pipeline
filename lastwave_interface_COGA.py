@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
+ """
 Created on Thu Apr 27 15:59:34 2023
 
 @author: lifep
@@ -1717,8 +1717,8 @@ if do_filter_by_subject:
     
     which_dx = 'AUD' # AUD ALAB ALD
     sex = '' # M F
-    min_age = 0
-    max_age = 99 
+    min_age = 0 
+    max_age = 99
     race = ''
     flat_cut = 0 # MAXIMUM DURATION IN SECONDS OF FLAT INTERVAL IN EEG SIGNAL (<5uV)
     noise_cut = 0 # MAXIMUM DURATION IN SECONDS OF NOISE INTERVAL IN EEG SIGNAL (>100uV)
@@ -1879,19 +1879,19 @@ if do_resnet_pac_regularization:
     from tensorflow.keras import regularizers
     from sklearn.model_selection import KFold
     from sklearn.model_selection import train_test_split
-
+    from sklearn.metrics import confusion_matrix
 
     from keras.applications.resnet import preprocess_input
     from tensorflow.keras.layers import BatchNormalization, Input, GlobalAveragePooling2D, Flatten, Dropout
 
 
-    which_dx = 'AUD' # AUD ALAB ALD
-    sex = '' # M F
-    min_age = 0
-    max_age = 99 
-    race = ''
-    flat_cut = 0 # MAXIMUM DURATION IN SECONDS OF FLAT INTERVAL IN EEG SIGNAL (<5uV)
-    noise_cut = 0 # MAXIMUM DURATION IN SECONDS OF NOISE INTERVAL IN EEG SIGNAL (>100uV)
+    # which_dx = 'AUD' # AUD ALAB ALD
+    # sex = '' # M F
+    # min_age = 0
+    # max_age = 99 
+    # race = ''
+    # flat_cut = 0 # MAXIMUM DURATION IN SECONDS OF FLAT INTERVAL IN EEG SIGNAL (<5uV)
+    # noise_cut = 0 # MAXIMUM DURATION IN SECONDS OF NOISE INTERVAL IN EEG SIGNAL (>100uV)
         
         
     # DEEP LEARNING MODEL
@@ -1899,7 +1899,7 @@ if do_resnet_pac_regularization:
     pooling = 'avg'
     img_height,img_width=224,224
     batch_size=32
-    epochs=10
+    epochs=50
     
     include_top = False
     save_resnet_model = False
@@ -1912,7 +1912,7 @@ if do_resnet_pac_regularization:
 
     # PATHS AND DATA INFO
     base_dir = 'D:\\COGA_eec\\'
-    targ_folder = 'resnet_by_subj_e_0_99_AUD_flat0_noise0_' # 'resnet_by_subj_20_40_cAUD_flat20_noise5'
+    # targ_folder = 'resnet_by_subj_e_0_99_AUD_flat0_noise0_' # 'resnet_by_subj_20_40_cAUD_flat20_noise5'
     whichEEGfileExtention = 'jpg'
     data_str = 'FZ' # PAC@FZ chanxHz
     
@@ -1968,13 +1968,13 @@ if do_resnet_pac_regularization:
 
     rn.trainable = False
 
-    # # Add L2 regularization to each convolutional and dense layer
-    # for layer in rn.layers:
-    #     if isinstance(layer, tf.keras.layers.Conv2D) or isinstance(layer, tf.keras.layers.Dense):
-    #     # if isinstance(layer, tf.keras.layers.Dense):
-    #         layer.kernel_regularizer = regularizers.l2(alpha)
-    #         if layer.use_bias:
-    #             layer.bias_regularizer = regularizers.l2(alpha)
+    # Add L2 regularization to each convolutional and dense layer
+    for layer in rn.layers:
+        if isinstance(layer, tf.keras.layers.Conv2D) or isinstance(layer, tf.keras.layers.Dense):
+        # if isinstance(layer, tf.keras.layers.Dense):
+            layer.kernel_regularizer = regularizers.l2(alpha)
+            if layer.use_bias:
+                layer.bias_regularizer = regularizers.l2(alpha)
 
 
     coga_model = Sequential()
@@ -2036,6 +2036,27 @@ if do_resnet_pac_regularization:
     plotter_lib.ylabel('Loss')
     plotter_lib.xlabel('Epochs')
     plotter_lib.legend(['train', 'validation'])  
+
+    yhat_probs = coga_model.predict(X_val, verbose=0)
+    yhat_probs = (yhat_probs > 0.5)
+    cm = confusion_matrix(y_val, yhat_probs)
+    TP = cm[0][0]
+    FN = cm[1][0]
+    FP = cm[0][1]
+    TN = cm[1][1]
+    
+    prec = TP/(TP+FP)
+    sens = TP/(TP+FN)
+    spec = TN/(TN+FP)
+    F1 = (2*prec*sens)/(prec + sens)
+    
+    print('precision: ' + str(prec))
+    print('sensitivity: ' + str(sens) )
+    print('specificity: ' + str(spec) )
+    print('F1: ' + str(F1))
+    
+
+
 
 
 

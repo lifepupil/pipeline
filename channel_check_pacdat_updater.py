@@ -8,7 +8,7 @@ Created on Thu Apr  4 16:19:05 2024
 import os 
 import numpy as np
 import pandas as pd
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 
 # TIME POINTS IN A ROW THAT MISS AMPLITUDE CUTOFFS
@@ -16,8 +16,9 @@ slip_f_cutoff = 0 # FOR FLATNESS (intervals of below 5uV diff)
 slip_n_cutoff = 0 # FOR NOISINESS (intervals continuously above 100uV diff)
 flat_threshold = 0.000005 # STANDARD 5 uV
 noise_threshold = 0.000100 # STANDARD 100 uV
-sub_dir = '' # cleaned_data FZ
-
+sub_dir = 'FZ' # cleaned_data FZ
+min_dur_flat = 0.25 # MINIMUM DURATION THAT FLAT INTERVAL MUST BE IN SECONDS
+min_dur_noise = 0.25 # MINIMUM DURATION THAT NOISE INTERVAL MUST BE IN SECONDS
 which_pacdat = 'pacdat_MASTER_bak.pkl'
 
 # csv_dir = "D:\\COGA_eec\\"
@@ -134,7 +135,7 @@ for r in range(ri,len(pacdat)):
                 if slip_f>0:
                     slip_f -= 1
             # FLAT INTERVAL MUST BE GREATER THAN 4 SAMPLES IN DURATION
-            elif flat_interval > 4:
+            elif flat_interval > sample_rate*min_dur_flat:
                 if slip_f == slip_f_cutoff:
                     flat_intervals = np.append(flat_intervals,flat_interval)
                     flat_interval = 0
@@ -146,13 +147,15 @@ for r in range(ri,len(pacdat)):
                 if slip_n>0:
                     slip_n -= 1
             # NOISY INTERVAL MUST BE GREATER THAN 4 SAMPLES IN DURATION
-            elif noise_interval > 4:
+            elif noise_interval > sample_rate*min_dur_noise:
                 if slip_n == slip_n_cutoff:
                     noise_intervals = np.append(noise_intervals,noise_interval)
                     noise_interval = 0
                 else:
                     slip_n += 1  
-                    
+
+        if len(flat_intervals)>1:                    
+            flat_intervals = flat_intervals[1:] # WE WANT TO GET RID OF THE LEADING ZERO
         perc_flat = 100*(flat_intervals.sum()/len(uv_diff))
         pacdat.at[r,'perc_flat_slip'+str(slip_f_cutoff)] = perc_flat
         pacdat.at[r,'N_flat_slip'+str(slip_f_cutoff)] = len(flat_intervals)
@@ -163,6 +166,8 @@ for r in range(ri,len(pacdat)):
         pacdat.at[r,'N_flat_slip'+str(slip_f_cutoff)] = len(flat_intervals)
         
         
+        if len(noise_intervals)>1:
+            noise_intervals = noise_intervals[1:] # WE WANT TO GET RID OF THE LEADING ZERO
         perc_noise = 100*(noise_intervals.sum()/len(uv_diff))
         pacdat.at[r,'perc_noise_slip'+str(slip_n_cutoff)] = perc_noise
         pacdat.at[r,'N_noise_slip'+str(slip_n_cutoff)] = len(noise_intervals)
@@ -177,11 +182,12 @@ pacdat.to_pickle(pac_dir + which_pacdat)
 # fz = pacdat[(pacdat.channel=='FZ') & (pacdat.max_flat>0)]
 # fz = pacdat[(pacdat.channel=='FZ') & (pacdat.max_noise>0)]
 # fz = pacdat[(pacdat.channel=='FZ') & (pacdat.max_noise>0) & (pacdat.max_flat>0)]
-fz = pacdat[(pacdat.channel=='FZ')]
-fz[['max_flat']].plot.hist(bins=50,xlabel='seconds', title='Duration of maximum flat interval\n(by EEG channel)',logy=True)
-fz[['max_noise']].plot.hist(bins=10,xlabel='seconds', title='Duration of maximum noise interval\n(by EEG channel)',logy=True)
-fz[['avg_flat_slip0']].plot.hist(bins=50,xlabel='seconds', title='Avg duration of flat interval with slip0\n(by EEG channel from eec)',logy=True)
-fz[['perc_flat_slip0']].plot.hist(bins=50,xlabel='percentage', title='Percent flat interval with slip1\n(by EEG channel from eec)',logy=True)
+# fz = pacdat[(pacdat.channel=='FZ')]
+# fz[['max_flat']].plot.hist(bins=50,xlabel='seconds', title='Duration of maximum flat interval\n(by EEG channel)',logy=True)
+# fz[['max_noise']].plot.hist(bins=10,xlabel='seconds', title='Duration of maximum noise interval\n(by EEG channel)',logy=True)
+# fz[['max_flat_slip0']].plot.hist(bins=50,xlabel='seconds', title='Max duration of flat interval with slip0\n(by EEG channel from eec)',logy=True)
+# fz[['avg_flat_slip0']].plot.hist(bins=50,xlabel='seconds', title='Avg duration of flat interval with slip0\n(by EEG channel from eec)',logy=True)
+# fz[['perc_flat_slip1']].plot.hist(bins=50,xlabel='percentage', title='Percent flat interval with slip1\n(by EEG channel from eec)',logy=True)
 
-ss = list(set(fz.site))
-for i in range(0,len(ss)): print(ss[i]+' '+ str(len(fz[(fz.max_flat==0) & (fz.site==ss[i])])))
+# ss = list(set(fz.site))
+# for i in range(0,len(ss)): print(ss[i]+' '+ str(len(fz[(fz.max_flat_slip0==0) & (fz.site==ss[i])])))
