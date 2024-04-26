@@ -19,7 +19,7 @@ noise_threshold = 0.000100 # STANDARD 100 uV
 sub_dir = '' # cleaned_data FZ
 min_dur_flat = 0.25 # MINIMUM DURATION THAT FLAT INTERVAL MUST BE IN SECONDS
 min_dur_noise = 0.25 # MINIMUM DURATION THAT NOISE INTERVAL MUST BE IN SECONDS
-which_pacdat = 'pacdat_MASTER_bak.pkl'
+which_pacdat = 'pacdat_MASTER.pkl'
 
 
 # csv_dir = "D:\\COGA_eec\\"

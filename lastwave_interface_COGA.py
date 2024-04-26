@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
- """
+"""
 Created on Thu Apr 27 15:59:34 2023
 
 @author: lifep
@@ -1720,7 +1720,7 @@ if do_filter_by_subject:
     min_age = 0 
     max_age = 99
     race = ''
-    flat_cut = 0 # MAXIMUM DURATION IN SECONDS OF FLAT INTERVAL IN EEG SIGNAL (<5uV)
+    flat_cut = 20 # MAXIMUM DURATION IN SECONDS OF FLAT INTERVAL IN EEG SIGNAL (<5uV)
     noise_cut = 0 # MAXIMUM DURATION IN SECONDS OF NOISE INTERVAL IN EEG SIGNAL (>100uV)
     
     # flat_cut = 256
@@ -1728,7 +1728,7 @@ if do_filter_by_subject:
     channel = 'FZ'
     base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
     source_folder = 'new_pac' # eeg_figures new_pac
-    targ_folder = 'resnet_by_subj_e_' + str(min_age) + '_' + str(max_age) + '_' + which_dx + '_flat' + str(flat_cut) + '_noise' + str(noise_cut) + '_' + sex
+    targ_folder = 'resnet_by_subj_e_' + str(min_age) + '_' + str(max_age) + '_' + which_dx + '_%flat' + str(flat_cut) + '_noise' + str(noise_cut) + '_' + sex
     whichEEGfileExtention = 'jpg' # png jpg
     which_pacdat = 'pacdat_MASTER.pkl'
 
@@ -1761,7 +1761,7 @@ if do_filter_by_subject:
     pacdat = pd.read_pickle(base_dir + which_pacdat)
     if len(sex)==0: 
         # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.flat_score<=flat_cut) & (pacdat.noise_score<=noise_cut)]
-        pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & ((pacdat.max_flat<=flat_cut) | (pacdat.max_noise<=noise_cut))]
+        pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & ((pacdat.perc_flat_slip1<=flat_cut) | (pacdat.max_noise<=noise_cut))]
         # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & ((pacdat.max_flat<=flat_cut) | (pacdat.max_noise<=noise_cut)) & (pacdat.race==race)]
         sexlbl = 'both'
 
@@ -1918,7 +1918,7 @@ if do_resnet_pac_regularization:
     
     
     # title_str = 'rn50 d-RSV L2 alpha=' + str(alpha) + ' ' + which_dx + ' ' + sex +  ' Age ' + str(min_age) + '-' + str(max_age) + ' f' + str(flat_cut) + 'n' + str(noise_cut) 
-    title_str = 'rn50 d-RSV' + ' ' + which_dx + ' ' + sex +  ' Age ' + str(min_age) + '-' + str(max_age) + ' f' + str(flat_cut) + 'n' + str(noise_cut) 
+    title_str = 'rn50 d-RSV' + ' ' + which_dx + ' ' + sex +  ' Age ' + str(min_age) + '-' + str(max_age) + ' %f' + str(flat_cut) + 'n' + str(noise_cut) 
     pth = base_dir + targ_folder + '\\'
     fl = csd.get_file_list(pth, whichEEGfileExtention)    
     fl_alc = csd.get_file_list(pth + 'alcoholic\\', whichEEGfileExtention)
