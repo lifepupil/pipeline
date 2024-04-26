@@ -16,10 +16,11 @@ slip_f_cutoff = 0 # FOR FLATNESS (intervals of below 5uV diff)
 slip_n_cutoff = 0 # FOR NOISINESS (intervals continuously above 100uV diff)
 flat_threshold = 0.000005 # STANDARD 5 uV
 noise_threshold = 0.000100 # STANDARD 100 uV
-sub_dir = 'FZ' # cleaned_data FZ
+sub_dir = '' # cleaned_data FZ
 min_dur_flat = 0.25 # MINIMUM DURATION THAT FLAT INTERVAL MUST BE IN SECONDS
 min_dur_noise = 0.25 # MINIMUM DURATION THAT NOISE INTERVAL MUST BE IN SECONDS
 which_pacdat = 'pacdat_MASTER_bak.pkl'
+
 
 # csv_dir = "D:\\COGA_eec\\"
 # pac_dir = "D:\\COGA_eec\\"
@@ -191,3 +192,4 @@ pacdat.to_pickle(pac_dir + which_pacdat)
 
 # ss = list(set(fz.site))
 # for i in range(0,len(ss)): print(ss[i]+' '+ str(len(fz[(fz.max_flat_slip0==0) & (fz.site==ss[i])])))
+
