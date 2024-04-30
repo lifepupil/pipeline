@@ -1715,13 +1715,13 @@ if do_filter_by_subject:
     import shutil
     import random
     
-    which_dx = 'AUD' # AUD ALAB ALD
+    which_dx = 'ALD' # AUD ALAB ALD
     sex = '' # M F
     min_age = 0 
     max_age = 99
     race = ''
-    flat_cut = 10 # MAXIMUM DURATION IN SECONDS OF FLAT INTERVAL IN EEG SIGNAL (<5uV)
-    noise_cut = 15 # MAXIMUM DURATION IN SECONDS OF NOISE INTERVAL IN EEG SIGNAL (>100uV)
+    flat_cut = 30 # MAXIMUM DURATION IN SECONDS OF FLAT INTERVAL IN EEG SIGNAL (<5uV)
+    noise_cut = 10 # MAXIMUM DURATION IN SECONDS OF NOISE INTERVAL IN EEG SIGNAL (>100uV)
     
     # flat_cut = 256
     # noise_cut = 256
@@ -1767,7 +1767,8 @@ if do_filter_by_subject:
         sexlbl = 'both'
 
     else:             
-        pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.sex==sex) & ((pacdat.max_flat<=flat_cut) | (pacdat.max_noise<=noise_cut))]
+        pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.sex==sex) & (pacdat.perc_flat_slip0<=flat_cut) & (pacdat.perc_noise_slip0<=noise_cut)]
+        # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.sex==sex) & ((pacdat.max_flat<=flat_cut) | (pacdat.max_noise<=noise_cut))]
         # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.sex==sex) & ((pacdat.max_flat<=flat_cut) | (pacdat.max_noise<=noise_cut)) & (pacdat.race==race)]
         sexlbl = sex
         
@@ -1896,7 +1897,7 @@ if do_resnet_pac_regularization:
         
         
     # DEEP LEARNING MODEL
-    learning_rate = .0001
+    learning_rate = .00001
     pooling = 'avg'
     img_height,img_width=224,224
     batch_size=32
@@ -1907,7 +1908,7 @@ if do_resnet_pac_regularization:
     
     # REGULARIZATION
     # Define L2 regularization factor
-    alpha = .0001
+    alpha = .001
     # USING KFold TO DO CROSS-VALIDATION
     # n_splits = 2 
 
