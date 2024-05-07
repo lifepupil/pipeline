@@ -23,8 +23,8 @@ import scipy.stats as stats
 # import sympy as sp
 # import pyprep as pp
 
-# import mne
-# from mne.preprocessing import ICA
+import mne
+from mne.preprocessing import ICA
 # import torch
 # import torch.nn as nn
 # import torch.optim as optim
@@ -150,7 +150,7 @@ if do_filter_eeg_signal_cnt:
     do_plot_channels = True # TO GENERATE PLOTS OF THE CLEANED EEG SIGNAL
     mpl.rcParams['figure.dpi'] = 300 # DETERMINES THE RESOLUTION OF THE EEG PLOTS
     eye_blink_chans = ['X', 'Y'] # NAMES OF CHANNELS CONTAINING EOG
-    institutionDir = 'washu' # suny, indiana, iowa, uconn, ucsd, washu
+    institutionDir = 'uconn' # suny, indiana, iowa, uconn, ucsd, washu
 
 
 if generate_pac_images:
@@ -1715,13 +1715,13 @@ if do_filter_by_subject:
     import shutil
     import random
     
-    which_dx = 'ALD' # AUD ALAB ALD
+    which_dx = 'AUD' # AUD ALAB ALD
     sex = '' # M F
     min_age = 0 
     max_age = 99
     race = ''
-    flat_cut = 30 # MAXIMUM DURATION IN SECONDS OF FLAT INTERVAL IN EEG SIGNAL (<5uV)
-    noise_cut = 10 # MAXIMUM DURATION IN SECONDS OF NOISE INTERVAL IN EEG SIGNAL (>100uV)
+    flat_cut = 50 # MAXIMUM DURATION IN SECONDS OF FLAT INTERVAL IN EEG SIGNAL (<5uV)
+    noise_cut = 100 # MAXIMUM DURATION IN SECONDS OF NOISE INTERVAL IN EEG SIGNAL (>100uV)
     
     # flat_cut = 256
     # noise_cut = 256
@@ -1897,7 +1897,7 @@ if do_resnet_pac_regularization:
         
         
     # DEEP LEARNING MODEL
-    learning_rate = .00001
+    learning_rate = .0001
     pooling = 'avg'
     img_height,img_width=224,224
     batch_size=32
@@ -2011,7 +2011,7 @@ if do_resnet_pac_regularization:
         coga_model.save(base_dir + 'MODEL_' + targ_folder + '.keras')
         
         
-    title_str+= ' N=' + N_str + ' alc=' + alc + '% lr=' + str(learning_rate) + ' pool=' + pooling
+    title_str+= ' N=' + N_str + ' alc=' + alc + '% lr=' + str(learning_rate) + ' alpha=' + str(alpha)
     fn = title_str.replace('(','')
     fn = fn.replace(')','')
     fn = fn.replace('=','_')
