@@ -23,8 +23,8 @@ import scipy.stats as stats
 # import sympy as sp
 # import pyprep as pp
 
-import mne
-from mne.preprocessing import ICA
+# import mne
+# from mne.preprocessing import ICA
 # import torch
 # import torch.nn as nn
 # import torch.optim as optim

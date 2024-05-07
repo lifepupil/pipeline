@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 # TIME POINTS IN A ROW THAT MISS AMPLITUDE CUTOFFS
 slip_f_cutoff = 0 # FOR FLATNESS (intervals of below 5uV diff)
 slip_n_cutoff = 0 # FOR NOISINESS (intervals continuously above 100uV diff)
-flat_threshold = 2e-06 # STANDARD 5 uV
+flat_threshold = 1e-06 # STANDARD 5 uV
 noise_threshold = 0.000100 # STANDARD 100 uV
 sub_dir = 'cleaned_data' # cleaned_data FZ
 min_dur_flat = 0.0 # MINIMUM DURATION THAT FLAT INTERVAL MUST BE IN SECONDS
