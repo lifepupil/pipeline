@@ -22,10 +22,10 @@ min_dur_noise = 0.0 # MINIMUM DURATION THAT NOISE INTERVAL MUST BE IN SECONDS
 which_pacdat = 'pacdat_MASTER.pkl'
 
 
-csv_dir = "D:\\COGA_eec\\"
-pac_dir = "D:\\COGA_eec\\"
-# csv_dir = "/ddn/crichard/eeg_csv/"
-# pac_dir = "/ddn/crichard/eeg_csv/pacdat/"
+# csv_dir = "D:\\COGA_eec\\"
+# pac_dir = "D:\\COGA_eec\\"
+csv_dir = "/ddn/crichard/eeg_csv/"
+pac_dir = "/ddn/crichard/eeg_csv/pacdat/"
 # csv_dir = os.environ['TMPDIR'] + '/data/'
 # pac_dir = os.environ['TMPDIR'] + '/input/'
 
