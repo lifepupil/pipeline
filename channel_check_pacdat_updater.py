@@ -184,23 +184,23 @@ pacdat.to_pickle(pac_dir + which_pacdat)
 # fz = pacdat[(pacdat.channel=='FZ') & (pacdat.max_flat>0)]
 # fz = pacdat[(pacdat.channel=='FZ') & (pacdat.max_noise>0)]
 # fz = pacdat[(pacdat.channel=='FZ') & (pacdat.max_noise>0) & (pacdat.max_flat>0)]
-fz = pacdat[(pacdat.channel=='FZ')]
-fz = pd_filtered[(pd_filtered.channel=='FZ')]
-logy = False
-logy = True
-fz[['max_flat']].plot.hist(bins=50,xlabel='seconds', title='Duration of maximum flat interval\n(by EEG channel)',logy=logy)
-fz[['max_noise']].plot.hist(bins=10,xlabel='seconds', title='Duration of maximum noise interval\n(by EEG channel)',logy=logy)
-fz[['max_flat_slip0']].plot.hist(bins=50,xlabel='seconds', title='Max duration of flat interval with slip0\n(by EEG channel from eec)',logy=logy)
-fz[['max_flat_slip1']].plot.hist(bins=50,xlabel='seconds', title='Max duration of flat interval with slip1\n(by EEG channel from eec)',logy=logy)
-fz[['avg_flat_slip0']].plot.hist(bins=50,xlabel='seconds', title='Avg duration of flat interval with slip0\n(by EEG channel from eec)',logy=logy)
-fz[['perc_flat_slip0']].plot.hist(bins=50,xlabel='percentage', title='Percent flat interval with slip0\n(by EEG channel from eec)',logy=logy)
-fz[['perc_flat_slip1']].plot.hist(bins=50,xlabel='percentage', title='Percent flat interval with slip1\n(by EEG channel from eec)',logy=logy)
-fz[['max_noise_slip0']].plot.hist(bins=50,xlabel='seconds', title='Max duration of noise interval with slip0\n(by EEG channel from eec)',logy=logy)
-fz[['max_noise_slip1']].plot.hist(bins=50,xlabel='seconds', title='Max duration of noise interval with slip1\n(by EEG channel from eec)',logy=logy)
-fz[['avg_noise_slip0']].plot.hist(bins=50,xlabel='seconds', title='Avg duration of noise interval with slip0\n(by EEG channel from eec)',logy=logy)
-fz[['avg_noise_slip1']].plot.hist(bins=50,xlabel='seconds', title='Avg duration of noise interval with slip1\n(by EEG channel from eec)',logy=logy)
-fz[['perc_noise_slip0']].plot.hist(bins=50,xlabel='percentage', title='Percent noise interval with slip0\n(by EEG channel from eec)',logy=logy)
-fz[['perc_noise_slip1']].plot.hist(bins=50,xlabel='percentage', title='Percent noise interval with slip1\n(by EEG channel from eec)',logy=logy)
+# fz = pacdat[(pacdat.channel=='FZ')]
+# fz = pd_filtered[(pd_filtered.channel=='FZ')]
+# logy = False
+# logy = True
+# fz[['max_flat']].plot.hist(bins=50,xlabel='seconds', title='Duration of maximum flat interval\n(by EEG channel)',logy=logy)
+# fz[['max_noise']].plot.hist(bins=10,xlabel='seconds', title='Duration of maximum noise interval\n(by EEG channel)',logy=logy)
+# fz[['max_flat_slip0']].plot.hist(bins=50,xlabel='seconds', title='Max duration of flat interval with slip0\n(by EEG channel from eec)',logy=logy)
+# fz[['max_flat_slip1']].plot.hist(bins=50,xlabel='seconds', title='Max duration of flat interval with slip1\n(by EEG channel from eec)',logy=logy)
+# fz[['avg_flat_slip0']].plot.hist(bins=50,xlabel='seconds', title='Avg duration of flat interval with slip0\n(by EEG channel from eec)',logy=logy)
+# fz[['perc_flat_slip0']].plot.hist(bins=50,xlabel='percentage', title='Percent flat interval with slip0\n(by EEG channel from eec)',logy=logy)
+# fz[['perc_flat_slip1']].plot.hist(bins=50,xlabel='percentage', title='Percent flat interval with slip1\n(by EEG channel from eec)',logy=logy)
+# fz[['max_noise_slip0']].plot.hist(bins=50,xlabel='seconds', title='Max duration of noise interval with slip0\n(by EEG channel from eec)',logy=logy)
+# fz[['max_noise_slip1']].plot.hist(bins=50,xlabel='seconds', title='Max duration of noise interval with slip1\n(by EEG channel from eec)',logy=logy)
+# fz[['avg_noise_slip0']].plot.hist(bins=50,xlabel='seconds', title='Avg duration of noise interval with slip0\n(by EEG channel from eec)',logy=logy)
+# fz[['avg_noise_slip1']].plot.hist(bins=50,xlabel='seconds', title='Avg duration of noise interval with slip1\n(by EEG channel from eec)',logy=logy)
+# fz[['perc_noise_slip0']].plot.hist(bins=50,xlabel='percentage', title='Percent noise interval with slip0\n(by EEG channel from eec)',logy=logy)
+# fz[['perc_noise_slip1']].plot.hist(bins=50,xlabel='percentage', title='Percent noise interval with slip1\n(by EEG channel from eec)',logy=logy)
 
 
 # ss = list(set(fz.site))

@@ -57,11 +57,13 @@ do_bad_channel_check =              False
 do_filter_figures_by_subject =      False
 do_filter_figures_by_condition =    False
 do_resnet_image_conversion =        False
-do_filter_by_subject =              True
-do_cnn_pac =                        False
-do_resnet_pac_regularization =      True
+do_filter_by_subject =              False
+do_filter_by_subject_dx_x_sex =     False
+do_resnet_pac_regularization_dx_x_sex = True
+do_resnet_pac_regularization =      False
 do_resnet_pac =                     False
 resnet_to_logistic =                False
+do_cnn_pac =                        False
 
 
 # PARAMETERS
@@ -697,7 +699,7 @@ if do_reshape_by_subject:
     dat = dat.sort_values(['ID','this_visit'], ascending=True)
     # FINALLY WE SAVE THE RESHAPED TABLE
     # dat.to_csv(base_dir + 'chan_hz_dat' + '.csv', index=False)
-    dat.to_pickle(base_dir  + 'chan_hz_dat.pkl')
+    dat.to_pickle(base_dir  + 'chan_hz_dat.')
     
 
 
@@ -707,7 +709,7 @@ if do_reshape_by_subject:
 if relocate_images_by_alcoholism:
     import shutil
     
-    which_pacdat = 'pacdat_cutoffs_flat_25_excessnoise_25.pkl'
+    which_pacdat = 'pacdat_cutoffs_flat_25_excessnoise_25.'
     whichEEGfileExtention = 'jpg'
     source_folder, targ_folder = 'chan_hz_figures_all','chan_hz'
 
@@ -725,7 +727,7 @@ if relocate_images_by_alcoholism:
     
     # OPEN PICKLE FILE
     pacdat = pd.read_pickle(base_dir + which_pacdat)
-    # dat = pd.read_pickle(base_dir + 'chan_hz_dat.pkl')
+    # dat = pd.read_pickle(base_dir + 'chan_hz_dat.')
     subset = pacdat[(pacdat.channel=='FZ')]
 
     # alc = dat[(dat.AUD_this_visit==1) & (dat.channel=='FZ')]
@@ -805,13 +807,13 @@ if do_deep_learn:
     
     from tensorflow.keras.models import Sequential
     from tensorflow.keras.layers import Dense, LeakyReLU, BatchNormalization, Dropout
-    from sklearn.model_selection import GroupShuffleSplit
+    # from sklearn.model_selection import GroupShuffleSplit
     import keras as ks
     
-    from keras.preprocessing.image import image
-    from keras.preprocessing.image import img_to_array
-    from keras.applications.resnet50 import preprocess_input    
-    from keras.applications.imagenet_utils import decode_predictions
+    # from keras.preprocessing.image import image
+    # from keras.preprocessing.image import img_to_array
+    # from keras.applications.resnet50 import preprocess_input    
+    # from keras.applications.imagenet_utils import decode_predictions
     
     write_dir = "E:\\Documents\\COGA_eec\\data\\"
     # OPEN dat DATA TABLE
@@ -1720,8 +1722,8 @@ if do_filter_by_subject:
     min_age = 0 
     max_age = 99
     race = ''
-    flat_cut = 50 # MAXIMUM DURATION IN SECONDS OF FLAT INTERVAL IN EEG SIGNAL (<5uV)
-    noise_cut = 100 # MAXIMUM DURATION IN SECONDS OF NOISE INTERVAL IN EEG SIGNAL (>100uV)
+    flat_cut = 50 # FLAT INTERVAL IN EEG SIGNAL (<1uV)
+    noise_cut = 1 # NOISE INTERVAL IN EEG SIGNAL (>100uV)
     
     # flat_cut = 256
     # noise_cut = 256
@@ -1762,12 +1764,13 @@ if do_filter_by_subject:
     if len(sex)==0: 
         # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.flat_score<=flat_cut) & (pacdat.noise_score<=noise_cut)]
         # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & ((pacdat.perc_flat_slip1<=flat_cut) & (pacdat.max_noise<=noise_cut))]
-        pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.perc_flat_slip0<=flat_cut) & (pacdat.perc_noise_slip0<=noise_cut)]
+        # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.perc_flat_slip0<=flat_cut) & (pacdat.perc_noise_slip0<=noise_cut)]
+        pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.max_flat_slip0<=flat_cut) & (pacdat.max_noise_slip0<=noise_cut)]
         # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & ((pacdat.max_flat<=flat_cut) | (pacdat.max_noise<=noise_cut)) & (pacdat.race==race)]
         sexlbl = 'both'
 
     else:             
-        pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.sex==sex) & (pacdat.perc_flat_slip0<=flat_cut) & (pacdat.perc_noise_slip0<=noise_cut)]
+        pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.sex==sex)  & (pacdat.max_flat_slip0<=flat_cut) & (pacdat.max_noise_slip0<=noise_cut)]
         # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.sex==sex) & ((pacdat.max_flat<=flat_cut) | (pacdat.max_noise<=noise_cut))]
         # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.sex==sex) & ((pacdat.max_flat<=flat_cut) | (pacdat.max_noise<=noise_cut)) & (pacdat.race==race)]
         sexlbl = sex
@@ -1866,6 +1869,384 @@ if do_filter_by_subject:
             
 
 
+
+if do_filter_by_subject_dx_x_sex:
+# MOVE PAC IMAGE FILES FROM SAME SUBJECT
+
+    import shutil
+    import random
+    
+    which_dx = 'AUD' # AUD ALAB ALD
+    min_age = 20  
+    max_age = 50
+    race = ''
+    flat_cut = 20 # FLAT INTERVAL IN EEG SIGNAL (<1uV)
+    noise_cut = 1 # NOISE INTERVAL IN EEG SIGNAL (>100uV)
+    num_rand_samples = 2
+    num_classes = 4
+    
+    # flat_cut = 256
+    # noise_cut = 256
+    channel = 'FZ'
+    base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
+    source_folder = 'new_pac' # eeg_figures new_pac
+    targ_folder = 'resnet_by_subj_e_' + str(min_age) + '_' + str(max_age) + '_' + which_dx + '_maxflat' + str(flat_cut) + '_maxnoise' + str(noise_cut) + '_grp' + str(num_classes)
+    whichEEGfileExtention = 'jpg' # png jpg
+    which_pacdat = 'pacdat_MASTER.pkl'
+
+    # CONSTANTS    
+    chan_i = 0 
+    visit_i = 3 
+    id_i = 4  
+
+    # GET FILE LIST WITH GIVEN EXTENSION FROM SOURCE FOLDER 
+    FileList = csd.get_file_list(base_dir + source_folder, whichEEGfileExtention)
+    # MAKE A DATAFRAME TO ENRICH WITH ADDITIONAL COLUMNS DERIVED FROM FILENAME INFO
+    file_info = pd.DataFrame(FileList, columns=['dir','fn'])
+    
+    c = [f.split('_')[chan_i] for f in  file_info.fn]
+    c = pd.DataFrame(c,columns=['channels'])
+    file_info.insert(0,'channels',c)
+
+    visitCodeList = [f.split('_')[visit_i][0] for f in  file_info.fn]
+    visitCodeList = [csd.convert_visit_code(v) for v in visitCodeList]    
+    v = pd.DataFrame(visitCodeList,columns=['this_visit'])
+    file_info.insert(0,'this_visit',v)
+    
+    v = [f.split('_')[id_i] for f in  file_info.fn]
+    v = pd.DataFrame(v,columns=['ID'])
+    file_info.insert(0,'ID',v)  
+    # EXCEPTIONS - REMOVING BECAUSE BELOW ID NOT CONVERTABLE INTO AN INTEGER
+    file_info[file_info.ID=='p0000079'] = 0
+    
+    # THIS LIST WILL HOLD NON-IMAGE INFO TO INCLUDE IN RESNET MODEL HOPEFULLY
+    ni = []
+    # GET MASTER TABLE OUT 
+    pacdat = pd.read_pickle(base_dir + which_pacdat)
+    # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.flat_score<=flat_cut) & (pacdat.noise_score<=noise_cut)]
+    # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & ((pacdat.perc_flat_slip1<=flat_cut) & (pacdat.max_noise<=noise_cut))]
+    # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.perc_flat_slip0<=flat_cut) & (pacdat.perc_noise_slip0<=noise_cut)]
+    pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.max_flat_slip0<=flat_cut) & (pacdat.max_noise_slip0<=noise_cut)]
+    # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & ((pacdat.max_flat<=flat_cut) | (pacdat.max_noise<=noise_cut)) & (pacdat.race==race)]
+    sexlbl = 'both'
+
+
+        
+    jpg_subj = set([int(i) for i in set(file_info.ID)])
+    pd_subj =  set([int(i) for i in set(pd_filtered.ID)])
+    overlap = jpg_subj.intersection(pd_subj)
+    
+    print(targ_folder)
+    filtered_N = str(len(set(pd_filtered.ID)))
+    qualifying_N = str(len(overlap))
+    total_N = str(len(pd_filtered))
+
+    print('There are N = ' + qualifying_N + ' subjects represented in PAC heatmap dataset')
+    print('out of ' + filtered_N + ' total subjects in this dataset')
+    print('total # files = ' + total_N)
+    print('Excluding EEG signals with:')
+    print(' - Ages ' + str(min_age) + '-' + str(max_age) + '')
+    print(' - Sex: ' + sexlbl)
+    print(' - flat intervals (<5uV) lasting longer than ' + str(flat_cut) + ' in duration (seconds)')
+    print(' - noise intervals (>100uV) lasting longer than ' + str(noise_cut) + ' in duration (seconds)')
+
+    # CYCLE THROUGH EVERY SUBJECT REPRESENTED IN FILES FROM SOURCE FOLDER
+    all_subj_figs = pd.unique(file_info.ID) 
+    # all_subj_figs = (np.array(list(overlap)))
+    for i in range(0,len(all_subj_figs)):
+        this_subj = all_subj_figs[i]
+        # this_subj = '10071029'
+        
+        # FIND ALL VISITS FOR A SUBJECT FROM DATA SUBSET THAT HAVE SATISFIED WHICHEVER AGE OR OTHER PARAMETERS 
+        svisits = file_info[(file_info.ID==this_subj)]
+        if len(svisits)>0:
+            # print(this_subj)
+
+            # WE WANT TO INCLUDE AUD DIAGNOSES IN FOLDER NAME FOR QUICK REF
+            vinfo = pd_filtered[(pd_filtered.ID==int(this_subj))]
+            if len(vinfo)>0:
+                # SINCE 
+                
+                # WE GET THE VISITS FOR SUBJECT THAT HAVE SATISFIED AGE AND/OR OTHER PARAMETERS
+                sv = list(set(svisits.this_visit.values))
+                vi = list(set(vinfo.this_visit.values))
+                for vs in sv:
+                    if vs not in vi:
+                        svisits = svisits[svisits.this_visit!=vs]
+                        
+                # WE USE VISIT TO MAKE IT EASIER TO GET ALCOHOL USE DIAGNOSIS AND OTHER INFO FOR THIS SUBJECT
+                if len(svisits)>0:
+                    rand_rows = svisits.loc[random.choices(svisits.index, k=num_rand_samples)]
+                    for r in range(0,num_rand_samples):
+                        rand_row = rand_rows.iloc[r]
+                        this_file =  rand_row.fn
+                        # WE WANT TO GET NON-IMAGE INFORMATION ABOUT THIS SUBJECT, IN THIS CASE, SEX
+                        # TO INCLUDE IN Input LAYER FOR RESNET (OR OTHER DEEP LEARNING IMAGE RECOGNITION MODEL)
+                        # THIS ONLY WORKS FOR SEX AT THIS TIME
+                        this_ni = vinfo[vinfo.this_visit==rand_row.this_visit].sex.values[0]
+                        # if this_ni=='F':
+                        #     ni.append(0) 
+                        # else:
+                        #     ni.append(1) 
+                        
+                        # AND NOW WE GET ALCOHOL USER DIAGNOSIS FOR THIS SUBJECT VISIT
+                        if which_dx=='ALAB':
+                            if vinfo[vinfo.this_visit==rand_row.this_visit].ALAB_this_visit.values[0]:
+                                if this_ni=='F':
+                                    diag_folder = 'alcoholic_F'
+                                else:
+                                    diag_folder = 'alcoholic_M'
+                            else:
+                                if this_ni=='F':
+                                    diag_folder = 'nonalcoholic_F'
+                                else:
+                                    diag_folder = 'nonalcoholic_M'
+                                
+                        elif which_dx=='AUD':
+                            if vinfo[vinfo.this_visit==rand_row.this_visit].AUD_this_visit.values[0]:
+                                if this_ni=='F':
+                                    diag_folder = 'alcoholic_F'
+                                else:
+                                    diag_folder = 'alcoholic_M'
+    
+                            else:
+                                if this_ni=='F':
+                                    diag_folder = 'nonalcoholic_F'
+                                else:
+                                    diag_folder = 'nonalcoholic_M'
+                            
+                        elif which_dx=='ALD':
+                            if vinfo[vinfo.this_visit==rand_row.this_visit].ALD_this_visit.values[0]:
+                                if this_ni=='F':
+                                    diag_folder = 'alcoholic_F'
+                                else:
+                                    diag_folder = 'alcoholic_M'
+    
+                            else:
+                                if this_ni=='F':
+                                    diag_folder = 'nonalcoholic_F'
+                                else:
+                                    diag_folder = 'nonalcoholic_M'
+                                    
+                                    
+                        subj_path = base_dir + targ_folder + '\\' + diag_folder + '\\' 
+                        if not os.path.exists(subj_path):
+                            os.makedirs(subj_path) 
+                        src = base_dir + source_folder + '\\' + this_file
+                        trg = subj_path + this_file
+                        shutil.copy(src, trg)
+            
+    # nid = pd.DataFrame(ni,columns=['ni'])
+    # nid.to_pickle(base_dir + targ_folder + '\\'  + 'nonimage.pkl')
+    print('\n ~~~~~~ There are N = ' + str(len(all_subj_figs)) + ' subjects in this dataset \n')
+            
+
+
+
+
+if do_resnet_pac_regularization_dx_x_sex:
+    
+    import matplotlib.pyplot as plotter_lib
+    import numpy as np
+    from PIL import Image
+    import tensorflow as tf
+    from keras.layers.core import Dense
+    from keras.models import Model
+    from keras.applications.resnet import preprocess_input
+
+    from tensorflow.keras.models import Sequential
+    from tensorflow.keras.optimizers import Adam
+    from tensorflow.keras.layers.experimental.preprocessing import Rescaling
+    from tensorflow.keras import regularizers
+
+    from tensorflow.keras.layers import Input
+    from tensorflow.keras.layers import GlobalAveragePooling2D
+    from tensorflow.keras.layers import Flatten
+    # from tensorflow.keras.layers import Dropout
+    # from tensorflow.keras.layers import Embedding
+    # from tensorflow.keras.layers import BatchNormalization
+    
+    from sklearn.model_selection import KFold
+    from sklearn.model_selection import train_test_split
+    from sklearn.metrics import confusion_matrix
+    from sklearn.preprocessing import OneHotEncoder
+
+
+    
+    which_dx = 'AUD' # AUD ALAB ALD
+    min_age = 20  
+    max_age = 50
+    race = ''
+    flat_cut = 20 # FLAT INTERVAL IN EEG SIGNAL (<1uV)
+    noise_cut = 1 # NOISE INTERVAL IN EEG SIGNAL (>100uV)
+    num_rand_samples = 2
+    num_classes = 4
+        
+    # DEEP LEARNING MODEL
+    learning_rate = .0001
+    pooling = 'avg'
+    # img_height,img_width=224,224
+    img_height,img_width=112,112
+    batch_size=32
+    epochs=50
+    
+    include_top = False
+    save_resnet_model = False
+    
+    # REGULARIZATION
+    # Define L2 regularization factor
+    alpha = .001
+    # USING KFold TO DO CROSS-VALIDATION
+    # n_splits = 2 
+
+    # PATHS AND DATA INFO
+    base_dir = 'D:\\COGA_eec\\'
+    # targ_folder = 'resnet_by_subj_e_' + str(min_age) + '_' + str(max_age) + '_' + which_dx + '_maxflat' + str(flat_cut) + '_maxnoise' + str(noise_cut) + '_grp' + str(num_classes)
+    targ_folder = 'resnet_by_subj_e_20_50_AUD_maxflat20_maxnoise1_grp4' # 'resnet_by_subj_20_40_cAUD_flat20_noise5'
+    whichEEGfileExtention = 'jpg'
+    data_str = 'FZ' # PAC@FZ chanxHz
+    
+    
+    # title_str = 'rn50 d-RSV L2 alpha=' + str(alpha) + ' ' + which_dx + ' ' + sex +  ' Age ' + str(min_age) + '-' + str(max_age) + ' f' + str(flat_cut) + 'n' + str(noise_cut) 
+    title_str = 'rn50 e-2sub 4grps' + ' ' + which_dx +  ' Age ' + str(min_age) + '-' + str(max_age) + ' %f' + str(flat_cut) + 'n' + str(noise_cut) 
+    pth = base_dir + targ_folder + '\\'
+    fl = csd.get_file_list(pth, whichEEGfileExtention)    
+    fl_alc = csd.get_file_list(pth + 'alcoholic\\', whichEEGfileExtention)
+    alc = str(round((len(fl_alc)/len(fl))*100,1))
+    N_str = str(len(fl))
+
+    # LISTS TO HOLD ACCURACY AND LOSS FUNCTION VALUES FOR PLOTTING
+    t_acc = []
+    v_acc = []
+    t_loss = []
+    v_loss = []
+    
+    # INPUT DATA AND LABELS TO PASS THROUGH KFold FUNCTION
+    images = []
+    labels = []
+    
+    # img_quadrants
+    # high left [0:112, 0:112]
+    # low left [111:223, 0:112]
+    # high right [0:112, 111:223]
+    # low right [111:223, 111:223]
+    
+    # ni = pd.read_pickle(base_dir + targ_folder + '\\'  + 'nonimage.pkl')
+    for dx in ['alcoholic_F', 'nonalcoholic_F', 'alcoholic_M', 'nonalcoholic_M']:
+        file_list = csd.get_file_list(pth + dx + '\\', whichEEGfileExtention)
+        for i in file_list:
+            img = Image.open(i[0] + i[1])
+            img_array = np.array(img)
+            # img_array = img_array[111:223, 0:112]
+            # img_array = img_array[0:112, 0:112]
+            # img_array = img_array[0:112, 111:223]
+            img_array = img_array[111:223, 111:223]
+            img_array = preprocess_input(img_array)
+            images.append(img_array)
+            labels.append(dx)
+    labels = np.array(labels)            
+    labels[labels=='alcoholic_F'] = 1
+    labels[labels=='nonalcoholic_F'] = 0
+    labels[labels=='alcoholic_M'] = 2
+    labels[labels=='nonalcoholic_M'] = 3
+    labels = labels.astype(int)
+    
+    # SINCE WE ARE TRYING TO CLASSIFY MULTIPLE GROUPS WE HAVE TO CONVERT 
+    # LABELS TO BE ONE-HOT ENCODED
+    images = np.array(images)      
+    labels = np.array(labels)      
+    labels = np.array(labels).reshape(-1, 1)
+    encoder = OneHotEncoder(sparse_output=False)
+    labels = encoder.fit_transform(labels)
+
+
+    # kf = KFold(n_splits=n_splits, shuffle=True)    
+    # for train_index, val_index in kf.split(images):
+    #     X_train, X_val = images[train_index], images[val_index]
+    #     y_train, y_val = labels[train_index], labels[val_index]
+    
+    X_train, X_val, y_train, y_val = train_test_split(images, labels, test_size=0.2, random_state=42)
+
+  
+    # rn = tf.keras.applications.ResNet152(
+    rn = tf.keras.applications.ResNet50(
+        include_top=include_top,
+        input_shape=(img_height, img_width,3),
+        pooling=pooling,
+        classes=4,
+        weights='imagenet') # imagenet or None
+
+    rn.trainable = False
+
+    # Add L2 regularization to each convolutional and dense layer
+    for layer in rn.layers:
+        if isinstance(layer, tf.keras.layers.Conv2D) or isinstance(layer, tf.keras.layers.Dense):
+        # if isinstance(layer, tf.keras.layers.Dense):
+            layer.kernel_regularizer = regularizers.l2(alpha)
+            if layer.use_bias:
+                layer.bias_regularizer = regularizers.l2(alpha)
+
+
+    x = rn.output 
+    x = Dense(1024, activation='relu')(x)  # Add a fully connected layer with 1024 units and ReLU activation
+    predictions = Dense(4, activation='softmax')(x) 
+    coga_model = Model(inputs=rn.input, outputs=predictions)
+
+    coga_model.compile(optimizer=Adam(learning_rate=learning_rate),
+                       loss=tf.keras.losses.CategoricalCrossentropy(),
+                       metrics=[tf.keras.metrics.CategoricalAccuracy()])
+    
+    
+    history = coga_model.fit(X_train, 
+                             y_train,
+                             validation_data=(X_val, y_val), 
+                             epochs=epochs,
+                             batch_size=batch_size,
+                             verbose=1)
+    t_acc = history.history['categorical_accuracy']
+    v_acc = history.history['val_categorical_accuracy']
+    t_loss = history.history['loss']
+    v_loss = history.history['val_loss']
+        
+    
+    # SAVE THIS MODEL
+    if save_resnet_model:
+        coga_model.save(base_dir + 'MODEL_' + targ_folder + '.keras')
+        
+        
+    title_str+= ' N=' + N_str + ' alc=' + alc + '% lr=' + str(learning_rate) + ' alpha=' + str(alpha)
+    fn = title_str.replace('(','')
+    fn = fn.replace(')','')
+    fn = fn.replace('=','_')
+    fn = fn.strip() + '.jpg'
+
+    epochs_range= range(epochs)
+    
+    plotter_lib.figure(figsize=(8, 8))
+    plotter_lib.plot(epochs_range, t_acc, label="Training Accuracy")
+    plotter_lib.plot(epochs_range, v_acc, label="Validation Accuracy")
+    plotter_lib.axis(ymin=0.0,ymax=1.01)
+    plotter_lib.grid()
+    plotter_lib.title(data_str + ' ' + title_str)
+    plotter_lib.ylabel('Accuracy')
+    plotter_lib.xlabel('Epochs')
+    plotter_lib.legend(['train', 'validation'])    
+    
+    plotter_lib.figure(figsize=(8, 8))
+    plotter_lib.plot(epochs_range, t_loss, label="Training Loss")
+    plotter_lib.plot(epochs_range, v_loss, label="Validation Loss")
+    plotter_lib.axis(ymin=0,ymax=max(v_loss))
+    plotter_lib.grid()
+    plotter_lib.title(data_str + ' ' + title_str)
+    plotter_lib.ylabel('Loss')
+    plotter_lib.xlabel('Epochs')
+    plotter_lib.legend(['train', 'validation'])  
+
+
+
+
+
+
 if do_resnet_pac_regularization:
     
     import matplotlib.pyplot as plotter_lib
@@ -1889,11 +2270,11 @@ if do_resnet_pac_regularization:
 
     # which_dx = 'AUD' # AUD ALAB ALD
     # sex = '' # M F
-    # min_age = 0
-    # max_age = 99 
+    # min_age = 20
+    # max_age = 30 
     # race = ''
-    # flat_cut = 0 # MAXIMUM DURATION IN SECONDS OF FLAT INTERVAL IN EEG SIGNAL (<5uV)
-    # noise_cut = 0 # MAXIMUM DURATION IN SECONDS OF NOISE INTERVAL IN EEG SIGNAL (>100uV)
+    # flat_cut = 50 # MAXIMUM DURATION IN SECONDS OF FLAT INTERVAL IN EEG SIGNAL (<5uV)
+    # noise_cut = 1 # MAXIMUM DURATION IN SECONDS OF NOISE INTERVAL IN EEG SIGNAL (>100uV)
         
         
     # DEEP LEARNING MODEL
@@ -1914,6 +2295,8 @@ if do_resnet_pac_regularization:
 
     # PATHS AND DATA INFO
     base_dir = 'D:\\COGA_eec\\'
+    targ_folder = 'resnet_by_subj_e_' + str(min_age) + '_' + str(max_age) + '_' + which_dx + '_%flat' + str(flat_cut) + '_%noise' + str(noise_cut) + '_' + sex
+
     # targ_folder = 'resnet_by_subj_e_0_99_AUD_flat0_noise0_' # 'resnet_by_subj_20_40_cAUD_flat20_noise5'
     whichEEGfileExtention = 'jpg'
     data_str = 'FZ' # PAC@FZ chanxHz
@@ -1943,7 +2326,7 @@ if do_resnet_pac_regularization:
             img_array = np.array(img)
             img_array = preprocess_input(img_array)
             images.append(img_array)
-            labels.append(dx)
+            labels.append(dx, ni[i])
     labels = np.array(labels)            
     labels[labels=='alcoholic'] = 1
     labels[labels=='nonalcoholic'] = 0
