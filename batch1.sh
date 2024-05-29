@@ -6,19 +6,19 @@
 #$ -l h_vmem=40G
 
 
-trap "rsync -av $TMPDIR/results/ $SGE_O_WORKDIR/processed1/;exit" SIGUSR1
+trap "rsync -av $TMPDIR/results/ $SGE_O_WORKDIR/proc_fc2_1/;exit" SIGUSR1
 
 
 cd $TMPDIR 
 mkdir input 
 mkdir results 
-rsync -av $SGE_O_WORKDIR/reference1/ input/ 
+rsync -av $SGE_O_WORKDIR/ref_fc2_1/ input/ 
 rsync -av $SGE_O_WORKDIR/pacdat/ input/
 
 cd /ddn/crichard/pipeline 
-python tensorpac_hpc1.py 
+python tensorpac_HPC_FC2.py 
 
-rsync -av $TMPDIR/results/ $SGE_O_WORKDIR/processed1/
+rsync -av $TMPDIR/results/ $SGE_O_WORKDIR/proc_fc2_1/
 
 
 
