@@ -59,7 +59,7 @@ do_filter_figures_by_condition =    False
 do_resnet_image_conversion =        False
 do_filter_by_subject =              False
 do_filter_by_subject_dx_x_sex =     False
-do_resnet_pac_regularization_dx_x_sex = True
+do_resnet_pac_regularization_dx_x_sex = False
 do_resnet_pac_regularization =      False
 do_resnet_pac =                     False
 resnet_to_logistic =                False
@@ -1685,8 +1685,8 @@ if do_resnet_image_conversion:
     from PIL import Image
 
     whichEEGfileExtention = 'jpg'
-    # read_dir = 'C:\\Users\\lifep\\OneDrive\\Desktop\\processed_new\\'
-    read_dir = 'D:\\COGA_eec\\new_pac\\' 
+    read_dir = 'C:\\Users\\lifep\\OneDrive\\Desktop\\processed\\'
+    # read_dir = 'D:\\COGA_eec\\processed\\' 
     write_dir = 'D:\\COGA_eec\\new_pac\\' 
 
     # fl_alc = csd.get_file_list(base_dir + 'alcoholic\\', whichEEGfileExtention)

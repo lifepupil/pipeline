@@ -41,5 +41,6 @@ for i in range(1,11):
             fcount+=1
             print(rl[f] + '  ' + wl[f])
             os.rename(rl[f], wl[f])
-        
+            
+    # os.rename(base_dir + write_folder + str(i) + '/*', base_dir + write_folder + 's/')
     print('folder ' + read_folder + str(i) + ' tranfered single EEG channel .CSV file count = ' + str(fcount))
