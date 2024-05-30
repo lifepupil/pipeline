@@ -1,6 +1,6 @@
 #!/bin/bash 
 
-#$ -N pac_1 
+#$ -N fc2_pac_1 
 #$ -cwd
 ##$ -pe smp 1
 #$ -l h_vmem=40G
