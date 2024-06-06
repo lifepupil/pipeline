@@ -16,10 +16,10 @@ import shutil
 base_dir = 'fc2o2_'
 whichEEGfileExtention = 'csv'
 num_nodes = 4 # HOW MANY HPC NODES (AND THEREFORE SEPARATE FOLDERS) TO PUT FILES INTO 
-read_dir = 'D:\\COGA_eec\\FC2O2\\'
-write_dir = 'D:\\COGA_eec\\'
-# read_dir = "/ddn/crichard/eeg_csv/FC2_O2/"
-# write_dir = "/ddn/crichard/eeg_csv/"
+# read_dir = 'D:\\COGA_eec\\FC2O2\\'
+# write_dir = 'D:\\COGA_eec\\'
+read_dir = "/ddn/crichard/eeg_csv/FC2_O2/"
+write_dir = "/ddn/crichard/eeg_csv/"
 
 # MAKE DATAFRAME WITH ALL PATHS AND FILENAMES AT read_dir
 fileList = csd.get_file_list(read_dir, whichEEGfileExtention)
@@ -54,7 +54,7 @@ for ii in range(0,len(index_intervals)-1):
     start = index_intervals[ii]
     end = index_intervals[ii+1]
     # CHECK TO SEE IF FOLDER EXISTS, IF NOT MAKE IT
-    trg_path = write_dir + base_dir + str(ii+1) + '\\'
+    trg_path = write_dir + base_dir + str(ii+1) + '/'
     if not os.path.exists(trg_path):
         os.makedirs(trg_path)
     
