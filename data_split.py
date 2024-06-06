@@ -18,7 +18,7 @@ whichEEGfileExtention = 'csv'
 num_nodes = 4 # HOW MANY HPC NODES (AND THEREFORE SEPARATE FOLDERS) TO PUT FILES INTO 
 # read_dir = 'D:\\COGA_eec\\FC2O2\\'
 # write_dir = 'D:\\COGA_eec\\'
-read_dir = "/ddn/crichard/eeg_csv/FC2O2/"
+read_dir = "/ddn/crichard/eeg_csv/FC2_O2/"
 write_dir = "/ddn/crichard/eeg_csv/"
 
 # MAKE DATAFRAME WITH ALL PATHS AND FILENAMES AT read_dir
