@@ -22,8 +22,8 @@ not_for_humans = True # IF False THEN KEEPS AXIS LABELS
 # (start freq., stop freq., width, step)
 f_pha = [0, 13, 2, 0.5]    # frequency range phase for the coupling
 f_amp = [4, 50, 6, 1]      # frequency range amplitude for the coupling
-vmin = -3
-vmax = 7
+vmin = -4
+vmax = 8
 epoch_dur = 300 # how many seconds in each epoch
 pac_method = 5 # Phase-Locking Value=5, modulation index=2
 surrogate_method = 2 # METHOD FOR COMPUTING SURROGATES - Swap amplitude time blocks
@@ -32,7 +32,7 @@ norm_method = 4 # normalization method for correction - z-scores
 #  https://etiennecmb.github.io/tensorpac/generated/tensorpac.Pac.html#tensorpac.Pac
 
 alpha = 0.2
-allsig = False # SET TO True TO SAVE FILE REGARDLESS OF ALPHA
+allsig = True # SET TO True TO SAVE FILE REGARDLESS OF ALPHA, False IF NOT
 mcp = 'fdr' # 'maxstat', 'fdr', 'bonferroni'
 n_perm=1000
 
