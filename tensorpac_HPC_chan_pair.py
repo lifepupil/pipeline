@@ -15,8 +15,10 @@ from tensorpac import Pac #, EventRelatedPac, PreferredPhase
 # import mne
 # import pickle5 as pickle
 
-channel_1 = ['FC2', '\\'] # EEG channel 1 to process Windows format
-channel_2 = ['O2','\\'] # EEG channel 2 to process Windows format
+channel_1 = ['FC2', '/'] # EEG channel 1 to process Linux format
+channel_2 = ['O2','/'] # EEG channel 2 to process Linux format
+# channel_1 = ['FC2', '\\'] # EEG channel 1 to process Windows format
+# channel_2 = ['O2','\\'] # EEG channel 2 to process Windows format
 not_for_humans = True # IF False THEN KEEPS AXIS LABELS
 # Dynamic definition of f_pha and f_amp:
 # (start freq., stop freq., width, step)
