@@ -70,8 +70,10 @@ for i in range(debug_i,len(chpac)):
     ch1FileName = chpac.iloc[i].eeg_file_name + '.csv'
     ch2FileName = channel_2[0] + '_' + base_filename + '.csv'
     
-    ch1PathFileName = read_dir + channel_1[0] + channel_1[1] + ch1FileName 
-    ch2PathFileName = read_dir + channel_2[0] + channel_2[1] + ch2FileName 
+    ch1PathFileName = read_dir + ch1FileName 
+    ch2PathFileName = read_dir + ch2FileName 
+    # ch1PathFileName = read_dir + channel_1[0] + channel_1[1] + ch1FileName 
+    # ch2PathFileName = read_dir + channel_2[0] + channel_2[1] + ch2FileName 
 
     ch1_exist = os.path.exists(ch1PathFileName)
     ch2_exist = os.path.exists(ch2PathFileName)
