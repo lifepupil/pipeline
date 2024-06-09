@@ -1,24 +1,27 @@
 #!/bin/bash 
 
-#$ -N pac_7 
+#$ -N pac_fc2o2_2 
 #$ -cwd
 ##$ -pe smp 1
 #$ -l h_vmem=40G
 
 
-trap "rsync -av $TMPDIR/results/ $SGE_O_WORKDIR/processed7/;exit" SIGUSR1
+trap "rsync -av $TMPDIR/results/ $SGE_O_WORKDIR/proc_fc2o2_2/;exit" SIGUSR1
 
 
 cd $TMPDIR 
 mkdir input 
 mkdir results 
-rsync -av $SGE_O_WORKDIR/reference7/ input/ 
+cd results
+mkdir FC2O2
+mkdir O2FC2
+rsync -av $SGE_O_WORKDIR/ref_fc2o2_2/ input/ 
 rsync -av $SGE_O_WORKDIR/pacdat/ input/
 
 cd /ddn/crichard/pipeline 
-python tensorpac_hpc1.py 
+python tensorpac_HPC_chan_pair.py 
 
-rsync -av $TMPDIR/results/ $SGE_O_WORKDIR/processed7/
+rsync -av $TMPDIR/results/ $SGE_O_WORKDIR/proc_fc2o2_2/
 
 
 
