@@ -136,8 +136,9 @@ for i in range(debug_i,len(chpac)):
             
             print(title)
             print('SIG ' + base_id + ', epoch ' + str(t) + '\n ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n')
-            savename = channel_1[0] + channel_2[0]  + channel_1[1] + channel_1[0] + '-' + channel_2[0] + '_' + base_filename
-            
+            # savename = channel_1[0] + channel_2[0]  + channel_1[1] + channel_1[0] + '-' + channel_2[0] + '_' + base_filename
+            savename = channel_1[0] + '-' + channel_2[0] + '_' + base_filename
+
             xpac = xpac12.squeeze()
             plt.figure(figsize=(5, 5))
             pac_ns = xpac.copy()
@@ -173,7 +174,8 @@ for i in range(debug_i,len(chpac)):
             
             print(title)
             print('SIG ' + base_id + ', epoch ' + str(t) + '\n ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n')
-            savename = channel_2[0] + channel_1[0] + channel_1[1] + channel_2[0] + '-' + channel_1[0] + '_' + base_filename
+            # savename = channel_2[0] + channel_1[0] + channel_1[1] + channel_2[0] + '-' + channel_1[0] + '_' + base_filename
+            savename = channel_1[0] + '-' + channel_2[0] + '_' + base_filename
 
             xpac = xpac12.squeeze()
             plt.figure(figsize=(5, 5))
