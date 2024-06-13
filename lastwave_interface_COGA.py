@@ -57,10 +57,10 @@ do_bad_channel_check =              False
 do_filter_figures_by_subject =      False
 do_filter_figures_by_condition =    False
 do_resnet_image_conversion =        False
-do_filter_by_subject =              False
+do_filter_by_subject =              True
 do_filter_by_subject_dx_x_sex =     False
 do_resnet_pac_regularization_dx_x_sex = False
-do_resnet_pac_regularization =      False
+do_resnet_pac_regularization =      True
 do_resnet_pac =                     False
 resnet_to_logistic =                False
 do_cnn_pac =                        False
@@ -1687,7 +1687,7 @@ if do_resnet_image_conversion:
     whichEEGfileExtention = 'jpg'
     read_dir = 'C:\\Users\\lifep\\OneDrive\\Desktop\\processed\\'
     # read_dir = 'D:\\COGA_eec\\processed\\' 
-    write_dir = 'D:\\COGA_eec\\new_pac\\' 
+    write_dir = 'D:\\COGA_eec\\new_pac_fz\\' 
 
     # fl_alc = csd.get_file_list(base_dir + 'alcoholic\\', whichEEGfileExtention)
     # fl_nonalc = csd.get_file_list(base_dir + 'nonalcoholic\\', whichEEGfileExtention)    
@@ -1719,8 +1719,8 @@ if do_filter_by_subject:
     
     which_dx = 'AUD' # AUD ALAB ALD
     sex = '' # M F
-    min_age = 0 
-    max_age = 99
+    min_age = 20  
+    max_age = 30
     race = ''
     flat_cut = 50 # FLAT INTERVAL IN EEG SIGNAL (<1uV)
     noise_cut = 1 # NOISE INTERVAL IN EEG SIGNAL (>100uV)
@@ -1729,7 +1729,7 @@ if do_filter_by_subject:
     # noise_cut = 256
     channel = 'FZ'
     base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
-    source_folder = 'new_pac' # eeg_figures new_pac
+    source_folder = 'new_pac_fz' # eeg_figures | new_pac | new_pac_fz
     targ_folder = 'resnet_by_subj_e_' + str(min_age) + '_' + str(max_age) + '_' + which_dx + '_%flat' + str(flat_cut) + '_%noise' + str(noise_cut) + '_' + sex
     whichEEGfileExtention = 'jpg' # png jpg
     which_pacdat = 'pacdat_MASTER.pkl'
@@ -2258,24 +2258,27 @@ if do_resnet_pac_regularization:
 
     from tensorflow.keras.models import Sequential
     from tensorflow.keras.optimizers import Adam
-    from tensorflow.keras.layers.experimental.preprocessing import Rescaling
     from tensorflow.keras import regularizers
-    from sklearn.model_selection import KFold
     from sklearn.model_selection import train_test_split
-    from sklearn.metrics import confusion_matrix
 
     from keras.applications.resnet import preprocess_input
     from tensorflow.keras.layers import BatchNormalization, Input, GlobalAveragePooling2D, Flatten, Dropout
+    from sklearn.metrics import confusion_matrix
+    from tensorflow.keras.layers.experimental.preprocessing import Rescaling
+    from sklearn.model_selection import KFold
 
 
-    # which_dx = 'AUD' # AUD ALAB ALD
-    # sex = '' # M F
-    # min_age = 20
-    # max_age = 30 
-    # race = ''
-    # flat_cut = 50 # MAXIMUM DURATION IN SECONDS OF FLAT INTERVAL IN EEG SIGNAL (<5uV)
-    # noise_cut = 1 # MAXIMUM DURATION IN SECONDS OF NOISE INTERVAL IN EEG SIGNAL (>100uV)
+
+    which_dx = 'AUD' # AUD ALAB ALD
+    sex = '' # M F
+    min_age = 20  
+    max_age = 30
+    race = ''
+    flat_cut = 999 # FLAT INTERVAL IN EEG SIGNAL (<1uV)
+    noise_cut = 999 # NOISE INTERVAL IN EEG SIGNAL (>100uV)
         
+    
+
         
     # DEEP LEARNING MODEL
     learning_rate = .0001
@@ -2326,7 +2329,7 @@ if do_resnet_pac_regularization:
             img_array = np.array(img)
             img_array = preprocess_input(img_array)
             images.append(img_array)
-            labels.append(dx, ni[i])
+            labels.append(dx)
     labels = np.array(labels)            
     labels[labels=='alcoholic'] = 1
     labels[labels=='nonalcoholic'] = 0
@@ -2422,23 +2425,23 @@ if do_resnet_pac_regularization:
     plotter_lib.xlabel('Epochs')
     plotter_lib.legend(['train', 'validation'])  
 
-    yhat_probs = coga_model.predict(X_val, verbose=0)
-    yhat_probs = (yhat_probs > 0.5)
-    cm = confusion_matrix(y_val, yhat_probs)
-    TP = cm[0][0]
-    FN = cm[1][0]
-    FP = cm[0][1]
-    TN = cm[1][1]
+    # yhat_probs = coga_model.predict(X_val, verbose=0)
+    # yhat_probs = (yhat_probs > 0.5)
+    # cm = confusion_matrix(y_val, yhat_probs)
+    # TP = cm[0][0]
+    # FN = cm[1][0]
+    # FP = cm[0][1]
+    # TN = cm[1][1]
     
-    prec = TP/(TP+FP)
-    sens = TP/(TP+FN)
-    spec = TN/(TN+FP)
-    F1 = (2*prec*sens)/(prec + sens)
+    # prec = TP/(TP+FP)
+    # sens = TP/(TP+FN)
+    # spec = TN/(TN+FP)
+    # F1 = (2*prec*sens)/(prec + sens)
     
-    print('precision: ' + str(prec))
-    print('sensitivity: ' + str(sens) )
-    print('specificity: ' + str(spec) )
-    print('F1: ' + str(F1))
+    # print('precision: ' + str(prec))
+    # print('sensitivity: ' + str(sens) )
+    # print('specificity: ' + str(spec) )
+    # print('F1: ' + str(F1))
     
 
 
