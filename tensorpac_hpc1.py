@@ -13,7 +13,7 @@ from tensorpac import Pac #, EventRelatedPac, PreferredPhase
 # from tensorpac.utils import PeakLockedTF, PSD, ITC, BinAmplitude
 # from tensorpac.signals import pac_signals_wavelet
 import mne
-import pickle5 as pickle
+# import pickle5 as pickle
 
 epoch_dur = 30 # how many seconds in each epoch
 pac_method = 5 # Phase-Locking Value=5, modulation index=2
@@ -22,12 +22,12 @@ norm_method = 4 # normalization method for correction - z-scores
 # FOR ALL POSSIBLE SETTINGS, SEE:
 #  https://etiennecmb.github.io/tensorpac/generated/tensorpac.Pac.html#tensorpac.Pac
 
-# read_dir = "D:\\COGA_eec\\"
-# write_dir = "D:\\COGA_eec\\"
+read_dir = "D:\\COGA_eec\\"
+write_dir = "D:\\COGA_eec\\"
 #read_dir = "/ddn/crichard/eeg_csv/"
 #write_dir = "/ddn/crichard/pipeline/processed/"
-read_dir = os.environ['TMPDIR'] + '/input/'
-write_dir = os.environ['TMPDIR'] + '/results/'
+# read_dir = os.environ['TMPDIR'] + '/input/'
+# write_dir = os.environ['TMPDIR'] + '/results/'
 which_pacdat = 'pacdat_MASTER.pkl'
 vmin = -3
 vmax = 7
@@ -82,9 +82,9 @@ for c in range(0,len(chanList_10_20)):
         thisFileName = chpac.iloc[i].eeg_file_name
 #        thisFileName = 'TP8_eec_4_f1_10006013_32_cnt_500'
         
-#        thisPathFileName = read_dir + 'cleaned_data\\' + thisFileName + '.csv'
+        thisPathFileName = read_dir + 'FZ\\' + thisFileName + '.csv'
 #        thisPathFileName = read_dir + sub_dir + '/' + thisFileName + '.csv'
-        thisPathFileName = read_dir + thisFileName + '.csv'
+        # thisPathFileName = read_dir + thisFileName + '.csv'
 
         
 #        print(thisPathFileName)
@@ -129,8 +129,8 @@ for c in range(0,len(chanList_10_20)):
           
             
             # sns.heatmap(np.flip(x,0), cmap='Reds')
-            img = sns.heatmap(np.flip(x,0), cmap='Reds',vmin=vmin, vmax=vmax, xticklabels=False,yticklabels=False, cbar=False)
-            # img = sns.heatmap(np.flip(x,0), cmap='Reds',vmin=vmin, vmax=vmax, xticklabels=True,yticklabels=True, cbar=True)
+            # img = sns.heatmap(np.flip(x,0), cmap='Reds',vmin=vmin, vmax=vmax, xticklabels=False,yticklabels=False, cbar=False)
+            img = sns.heatmap(np.flip(x,0), cmap='Reds',vmin=vmin, vmax=vmax, xticklabels=True,yticklabels=True, cbar=True)
             fig = plt.Axes.get_figure(img)
             
             # FINALLY WE SAVE IT AS A JPG -    THIS WILL BE IMPORTANT FOR RESIZING 
@@ -152,7 +152,7 @@ for c in range(0,len(chanList_10_20)):
             # del p
         # print(str(mn[-1]) + ' to ' + str(mx[-1]) + '\n')
 #        print(str(min(mn)) + ' to ' + str(max(mx)) + '\n')
-with open('min_pac.pkl', 'wb') as f:
-    pickle.dump(mn, f)
-with open('max_pac.pkl', 'wb') as f:
-    pickle.dump(mx, f)
+# with open('min_pac.pkl', 'wb') as f:
+#     pickle.dump(mn, f)
+# with open('max_pac.pkl', 'wb') as f:
+#     pickle.dump(mx, f)

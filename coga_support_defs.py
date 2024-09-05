@@ -305,3 +305,115 @@ def convert_visit_code(vc):
     except:
         thisVisit = 999
     return thisVisit
+
+
+def match_age1(group1,group2):
+    import math
+    import pandas as pd
+    
+    print('match_age1 started')
+
+    # group1 = group1.sort_values(by=['age_this_visit'])
+    group2 = group2.sort_values(by=['age_this_visit'])
+    group1 = group1.sample(frac=1, random_state=42).reset_index(drop=True)
+    # group2 = group2.sample(frac=1, random_state=42).reset_index(drop=True)
+    # hdr = group1.columns()
+    len_grp1 = len(group1)
+    len_grp1_now = len(group1)
+
+    len_grp2 = len(group2)
+    
+    
+    group2_ind = []
+    group1_ind = []
+    age_diffs = [0]
+    # age_diffs = [0,1,-1,2,-2,3,-3]
+    for this_ad in age_diffs:
+        for row2_i, age2 in enumerate(group2.age_this_visit):
+            if math.isnan(age2): # continue if age is missing
+                print('nan found' + ' ' + str(row2_i) )
+                continue
+            row1_i = 0
+            group1 = group1.reset_index(drop=True)
+            while row1_i < len(group1):
+
+                age1 = group1.age_this_visit.values[row1_i]
+                
+                try:
+                    (group1.iloc[row1_i].ID == group2.iloc[row2_i].ID)
+                except:
+                    print(str(row1_i) + ' ' + str(row2_i) + ' ' )    
+                    
+                # WE WANT TO MAKE SURE WE ARE AGE MATCHING TWO DIFFERENT PEOPLE, NOT THE SAME PERSON
+                if (group1.iloc[row1_i].ID == group2.iloc[row2_i].ID):
+                    print(str(row2_i) + ' of ' + str(len_grp2) + ' alc, ' + str(row1_i) + ' of ' + str(len_grp1_now) + ' ctl (' + str(len_grp1) +  '), bad match ' + group1.iloc[row1_i].eeg_file_name + ' ' +  group2.iloc[row2_i].eeg_file_name)
+                    row1_i += 1
+                    continue
+                if math.isnan(age1):# continue if age is missing
+                    print('nan found' + (str(row1_i) + ' ' + str(row2_i) ))
+                    continue
+                # if row1_i in group1_ind: # continue if age is missing
+                #     continue
+                if (age2==age1 + this_ad):
+                    group1_ind.append(group1.iloc[row1_i].copy())
+                    group2_ind.append(group2.iloc[row2_i].copy())
+                    group1.drop(index=row1_i, inplace=True)
+                    len_grp1_now = len(group1)
+
+                    # group2.drop(index=row2_i, inplace=True)
+                    # print(str(row2_i) + ' '  + str(row1_i))
+                    break
+                    
+                row1_i += 1
+
+    print('MATCHED: ' + str(row2_i) + ' of ' + str(len_grp2) + ' alc, ' + str(len_grp1 - len(group1)) + ' of ' + str(len_grp1) + ' ctl')    
+    print('final group1 N = ' + str(len(group1_ind)) + ' \nfinal group2 N = ' + str(len(group2_ind)))    
+    group1_ind = pd.DataFrame(group1_ind)
+    group2_ind = pd.DataFrame(group2_ind)
+    
+    return group1_ind, group2_ind
+    # filename='group2_ind_aud.txt'
+    # np.savetxt(filename, group2_ind)
+    # filename='group1_ind_cntl.txt'
+    # np.savetxt(filename, group1_ind)
+    
+    
+    # The two groups include ID and session,
+    # and age (it can have more features of course)
+    # the return are the indices from both goups that are
+    # matched
+    # group2_ind = []
+    # group1_ind = []
+    # # age_diffs = [0]
+    # age_diffs = [0,1,-1,2,-2,3,-3]
+    # for this_ad in age_diffs:
+    #     for row2_i, age2 in enumerate(group2.age_this_visit):
+    #         matched = False
+    #         if math.isnan(age2): # continue if age is missing
+    #             continue
+    #         for row1_i, age1 in enumerate(group1.age_this_visit):
+    #             # WE WANT TO MAKE SURE WE ARE AGE MATCHING TWO DIFFERENT PEOPLE, NOT THE SAME PERSON
+    #             if (group1.iloc[row1_i].ID == group2.iloc[row2_i].ID):
+    #                 continue
+    #             if math.isnan(age1):# continue if age is missing
+    #                 continue
+    #             if row1_i in group1_ind: # continue if age is missing
+    #                 continue
+    #             if (age2==age1 + this_ad):
+    #                 group1_ind.append(row1_i)
+    #                 group2_ind.append(row2_i)
+    #                 # group1.drop(index=row1_i, inplace=True)
+    #                 # group2.drop(index=row2_i, inplace=True)
+    #                 matched = True
+    #                 break
+    #             else:
+    #                 if row1_i == len(group1):
+    #                     break
+    #             if matched:
+    #                 break
+
+    #     return group1_ind, group2_ind
+    #     # filename='group2_ind_aud.txt'
+    #     # np.savetxt(filename, group2_ind)
+    #     # filename='group1_ind_cntl.txt'
+    #     # np.savetxt(filename, group1_ind)
