@@ -307,57 +307,137 @@ def convert_visit_code(vc):
     return thisVisit
 
 
-def match_age1(group1,group2):
+
+
+def match_age2(group1,group2,seeds, ttl):
+    import pandas as pd
+    import matplotlib.pyplot as plt
+
+    
+    group1 = group1.sample(frac=1, random_state=seeds[0]).reset_index(drop=True)
+    group2 = group2.sample(frac=1, random_state=seeds[1]).reset_index(drop=True)
+    
+    
+    len_grp2 = len(group2)
+    print('N of AUD ' + str(len_grp2))
+    
+    group2_ind = []
+    group1_ind = []
+    
+    minage = int(min(group2.age_this_visit))
+    maxage = int(max(group2.age_this_visit))
+    # ttl = 'Ages ' + str(minage) + '-' + str(maxage) + ', AUD N=' + str(len(group2)) + ', ctl N=' + str(len(group1))
+    pltlog = True
+        
+    # pd.concat([group1,group2]).plot.hist(column=["age_this_visit"], by="AUD_this_visit", title='AUD and non-AUD age distributions')
+    plt.hist(group1[['age_this_visit']], bins=(maxage-minage), label='unaffected', edgecolor='black', color='w', log=pltlog)
+    plt.hist(group2[['age_this_visit']], bins=(maxage-minage), label='AUD', alpha=0.5, color='b', log=pltlog)
+    plt.xlabel('Age')
+    plt.ylabel('Frequency')
+    plt.title(ttl)
+    plt.legend()
+    plt.show()
+    
+    ages = range(minage,maxage+1,1)
+    
+    for age in ages:
+        g1age = group1[group1.age_this_visit==age].reset_index(drop=True)
+        g2age = group2[group2.age_this_visit==age].reset_index(drop=True)
+        print('age is ' + str(age) + ' -- length g1age = ' + str(len(g1age)) + ', length g2age = ' + str(len(g2age)))
+        if len(g2age)>0:
+            if len(g2age)>len(g1age): 
+                for s in range(0,len(g1age)):
+                    group1_ind.append(g1age.iloc[s].copy())
+                    group2_ind.append(g2age.iloc[s].copy())
+            else:
+                for s in range(0,len(g2age)):
+                    group1_ind.append(g1age.iloc[s].copy())
+                    group2_ind.append(g2age.iloc[s].copy())
+                    
+    print('final group1 N = ' + str(len(group1_ind)) + ' \nfinal group2 N = ' + str(len(group2_ind)))    
+    group1_ind = pd.DataFrame(group1_ind)
+    group2_ind = pd.DataFrame(group2_ind)
+    return group1_ind, group2_ind
+ 
+    
+    
+    
+    
+    
+    
+    
+    
+def match_age1(group1,group2, seeds):
     import math
     import pandas as pd
     
     print('match_age1 started')
 
     # group1 = group1.sort_values(by=['age_this_visit'])
-    group2 = group2.sort_values(by=['age_this_visit'])
-    group1 = group1.sample(frac=1, random_state=42).reset_index(drop=True)
-    # group2 = group2.sample(frac=1, random_state=42).reset_index(drop=True)
+    # group2 = group2.sort_values(by=['age_this_visit'])
+    # group2 = group2.reset_index(drop=True)
+    
+    group1 = group1.sample(frac=1, random_state=seeds[0]).reset_index(drop=True)
+    group2 = group2.sample(frac=1, random_state=seeds[1]).reset_index(drop=True)
+    
+
+    
     # hdr = group1.columns()
     len_grp1 = len(group1)
     len_grp1_now = len(group1)
 
     len_grp2 = len(group2)
-    
+    print('N of AUD ' + str(len_grp2))
     
     group2_ind = []
     group1_ind = []
-    age_diffs = [0]
-    # age_diffs = [0,1,-1,2,-2,3,-3]
-    for this_ad in age_diffs:
+
+    while len(group1)>0:
+        print('SECOND PASS - still ' + str(len(group1)) + ' ')
         for row2_i, age2 in enumerate(group2.age_this_visit):
+            
+            # JUST IN CASE WE HAVE NAN
             if math.isnan(age2): # continue if age is missing
                 print('nan found' + ' ' + str(row2_i) )
                 continue
-            row1_i = 0
+            
             group1 = group1.reset_index(drop=True)
-            while row1_i < len(group1):
-
-                age1 = group1.age_this_visit.values[row1_i]
-                
-                try:
-                    (group1.iloc[row1_i].ID == group2.iloc[row2_i].ID)
-                except:
-                    print(str(row1_i) + ' ' + str(row2_i) + ' ' )    
-                    
-                # WE WANT TO MAKE SURE WE ARE AGE MATCHING TWO DIFFERENT PEOPLE, NOT THE SAME PERSON
-                if (group1.iloc[row1_i].ID == group2.iloc[row2_i].ID):
-                    print(str(row2_i) + ' of ' + str(len_grp2) + ' alc, ' + str(row1_i) + ' of ' + str(len_grp1_now) + ' ctl (' + str(len_grp1) +  '), bad match ' + group1.iloc[row1_i].eeg_file_name + ' ' +  group2.iloc[row2_i].eeg_file_name)
-                    row1_i += 1
-                    continue
+            # age2 = group2.age_this_visit.values[row2_i]
+            # WE WANT TO GET ALL group1 ROW INDICES THAT HAVE SAME AGE AS SUBJECT TO BE MATCHED FROM group2
+            g1_age2 = group1[group1.age_this_visit==age2].index
+            # JUST IN CASE WE RUN OUT, AND IF SO THIS HELPS TO EXPLAIN HOW MANY SUBJECTS ARE LOST FROM LACK OF AN AGE MATCH
+            if len(g1_age2)==0:
+                print('no more matchable subjects for age ' + str(age2))
+                break
+            
+            row1_i = 0
+            while row1_i < len(g1_age2):
+                # WE USE g1a2_i TO KNOW WHICH ROW TO REMOVE FROM group1
+                g1a2_i = g1_age2[row1_i]
+                age1 = group1.age_this_visit.values[g1a2_i]
                 if math.isnan(age1):# continue if age is missing
                     print('nan found' + (str(row1_i) + ' ' + str(row2_i) ))
                     continue
-                # if row1_i in group1_ind: # continue if age is missing
-                #     continue
-                if (age2==age1 + this_ad):
-                    group1_ind.append(group1.iloc[row1_i].copy())
+                
+                # WE WANT TO MAKE SURE WE ARE AGE MATCHING TWO DIFFERENT PEOPLE, NOT THE SAME PERSON
+                if (group1.iloc[g1a2_i].ID == group2.iloc[row2_i].ID):
+                    print(str(row2_i) + ' of ' + str(len_grp2) + ' alc, ' + str(row1_i) + ' of ' + str(len_grp1_now) + ' ctl (' + str(len_grp1) +  '), bad match ' + group1.iloc[row1_i].eeg_file_name + ' ' +  group2.iloc[row2_i].eeg_file_name)
+                    row1_i += 1
+                    continue
+
+
+                if (age2==age1):
+                    group1_ind.append(group1.iloc[g1a2_i].copy())
                     group2_ind.append(group2.iloc[row2_i].copy())
-                    group1.drop(index=row1_i, inplace=True)
+                    # print(str(group1_ind[-1].age_this_visit) + ' ' + str(group2_ind[-1].age_this_visit))
+                    group1.drop(index=g1a2_i, inplace=True)
+                    if len(group1[group1.ID==group1_ind[-1].ID])>0:
+                        # len_before = len(group1)
+                        group1 = group1[group1.ID!=group1_ind[-1].ID]
+                        # len_after = len(group1)
+                        # len_change = len_before - len_after
+                        # print('removing other instances of matched subject ' + str(group1_ind[-1].ID) + ', N before=' + str(len_before) + ', removed ' + str(len_change) )
+
                     len_grp1_now = len(group1)
 
                     # group2.drop(index=row2_i, inplace=True)
@@ -377,6 +457,7 @@ def match_age1(group1,group2):
     # filename='group1_ind_cntl.txt'
     # np.savetxt(filename, group1_ind)
     
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     
     # The two groups include ID and session,
     # and age (it can have more features of course)

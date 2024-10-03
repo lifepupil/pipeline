@@ -56,10 +56,11 @@ do_bad_channel_check =              False
 do_filter_figures_by_subject =      False
 do_filter_figures_by_condition =    False
 do_resnet_image_conversion =        False
-do_filter_by_subject =              True
+do_mean_PAC_by_subject =            True
+do_filter_by_subject =              False
 do_filter_by_subject_dx_x_sex =     False
 do_resnet_pac_regularization_dx_x_sex = False
-do_resnet_pac_regularization =      True
+do_resnet_pac_regularization =      False
 do_resnet_pac =                     False
 resnet_to_logistic =                False
 do_cnn_pac =                        False
@@ -1706,20 +1707,18 @@ if do_resnet_image_conversion:
         img2.close()
         
         
-        
-        
-        
-        
-if do_filter_by_subject:
+if do_mean_PAC_by_subject:
 # MOVE PAC IMAGE FILES FROM SAME SUBJECT
 
     import shutil
     import random
-    
+    from PIL import Image
+
+    use_pickle = False
     which_dx = 'AUD' # AUD ALAB ALD
-    sex = 'F' # M F
-    min_age = 25 
-    max_age = 40
+    sex = '' # M F
+    min_age = 0 
+    max_age = 99
     race = ''
     flat_cut = 99999 # FLAT INTERVAL IN EEG SIGNAL (<1uV)
     noise_cut = 99999 # NOISE INTERVAL IN EEG SIGNAL (>100uV)
@@ -1730,7 +1729,7 @@ if do_filter_by_subject:
 
     base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
     source_folder = 'new_pac_' + channelstr # eeg_figures | new_pac | new_pac_fz
-    targ_folder = 'resnet_by_subj_a_' + channelstr + '_' + str(min_age) + '_' + str(max_age) + '_' + which_dx + '_%flat' + str(flat_cut) + '_%noise' + str(noise_cut) + '_' + sex
+    targ_folder = 'resnet_by_subj_a_' + channelstr + '_' + str(min_age) + '_' + str(max_age) + '_' + which_dx + '_%flat' + str(flat_cut) + '_%noise' + str(noise_cut) + '_' + sex + '_MULT'
     whichEEGfileExtention = 'jpg' # png jpg
     which_pacdat = 'pacdat_MASTER.pkl'
 
@@ -1762,19 +1761,33 @@ if do_filter_by_subject:
     # GET MASTER TABLE OUT 
     pacdat = pd.read_pickle(base_dir + which_pacdat)
     if len(sex)==0: 
+        
+        
+        # alc = pacdat[(pacdat.AUD_this_visit==True) & (pacdat.ald5sx_cnt>=6) & (pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age)]
+        # ctl = pacdat[(pacdat.AUD_this_visit==False) & (pacdat.ald5sx_cnt.isnull()) & (pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age)]
+        # pd_filtered = pd.concat([alc,ctl])
+        
+        pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age)]
         # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.flat_score<=flat_cut) & (pacdat.noise_score<=noise_cut)]
         # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & ((pacdat.perc_flat_slip1<=flat_cut) & (pacdat.max_noise<=noise_cut))]
         # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.perc_flat_slip0<=flat_cut) & (pacdat.perc_noise_slip0<=noise_cut)]
-        pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.max_flat_slip0<=flat_cut) & (pacdat.max_noise_slip0<=noise_cut)]
+        # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.max_flat_slip0<=flat_cut) & (pacdat.max_noise_slip0<=noise_cut)]
         # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & ((pacdat.max_flat<=flat_cut) | (pacdat.max_noise<=noise_cut)) & (pacdat.race==race)]
+        
         sexlbl = 'both'
 
-    else:             
-        pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.sex==sex)  & (pacdat.max_flat_slip0<=flat_cut) & (pacdat.max_noise_slip0<=noise_cut)]
+    else:            
+        alc = pacdat[(pacdat.AUD_this_visit==True) & (pacdat.ald5sx_cnt>=6) & (pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.sex_x==sex)]
+        ctl = pacdat[(pacdat.AUD_this_visit==False) & (pacdat.ald5sx_cnt.isnull()) & (pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.sex_x==sex)]
+        pd_filtered = pd.concat([alc,ctl])
+        # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.sex_x==sex)  & (pacdat.max_flat_slip0<=flat_cut) & (pacdat.max_noise_slip0<=noise_cut)]
         # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.sex==sex) & ((pacdat.max_flat<=flat_cut) | (pacdat.max_noise<=noise_cut))]
         # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.sex==sex) & ((pacdat.max_flat<=flat_cut) | (pacdat.max_noise<=noise_cut)) & (pacdat.race==race)]
         sexlbl = sex
-        
+    
+    if use_pickle:
+        pd_filtered =  pd.read_pickle('D:\\COGA_eec\\TEMP\\pd_fn__16_25_AUD.pkl')
+
     jpg_subj = set([int(i) for i in set(file_info.ID)])
     pd_subj =  set([int(i) for i in set(pd_filtered.ID)])
     overlap = jpg_subj.intersection(pd_subj)
@@ -1809,61 +1822,312 @@ if do_filter_by_subject:
             vinfo = pd_filtered[(pd_filtered.ID==int(this_subj))]
             if len(vinfo)>0:
                 
+                # sv CONTAINS ORDINALS FOR ALL VISITS FOR THIS SUBJECT FROM svisits
                 sv = list(set(svisits.this_visit.values))
+                # vi CONTAINS ORDINALS FOR VISITS THAT SATISFY AGE CRITERIA
                 vi = list(set(vinfo.this_visit.values))
+                # REMOVE VISITS NOT WITHIN AGE REQUIREMENTS FROM svisits
                 for vs in sv:
                     if vs not in vi:
                         svisits = svisits[svisits.this_visit!=vs]
                         
                     
                 if len(svisits)>0:
-                    rand_row = svisits.loc[random.choice(svisits.index)]
-                    this_file =  rand_row.fn
-                    if which_dx=='ALAB':
-                        if vinfo[vinfo.this_visit==rand_row.this_visit].ALAB_this_visit.values[0]:
-                            diag_folder = 'alcoholic'
-                        else:
-                            diag_folder = 'nonalcoholic'
-                    elif which_dx=='AUD':
-                        if vinfo[vinfo.this_visit==rand_row.this_visit].AUD_this_visit.values[0]:
-                            diag_folder = 'alcoholic'
-                        else:
-                            diag_folder = 'nonalcoholic'
-                    elif which_dx=='ALD':
-                        if vinfo[vinfo.this_visit==rand_row.this_visit].ALD_this_visit.values[0]:
-                            diag_folder = 'alcoholic'
-                        else:
-                            diag_folder = 'nonalcoholic'
-                    subj_path = base_dir + targ_folder + '\\' + diag_folder + '\\' 
-                    if not os.path.exists(subj_path):
-                        os.makedirs(subj_path) 
-                    src = base_dir + source_folder + '\\' + this_file
-                    trg = subj_path + this_file
-                    shutil.copy(src, trg)
                     
-                    # for f in range(0,len(svisits)):
-                    #     this_file =  svisits.iloc[f].fn
-                    #     if which_dx=='ALAB':
-                    #         if vinfo[vinfo.this_visit==svisits.iloc[f].this_visit].ALAB_this_visit.values[0]:
-                    #             diag_folder = 'alcoholic'
-                    #         else:
-                    #             diag_folder = 'nonalcoholic'
-                    #     elif which_dx=='AUD':
-                    #         if vinfo[vinfo.this_visit==svisits.iloc[f].this_visit].AUD_this_visit.values[0]:
-                    #             diag_folder = 'alcoholic'
-                    #         else:
-                    #             diag_folder = 'nonalcoholic'
-                    #     elif which_dx=='ALD':
-                    #         if vinfo[vinfo.this_visit==svisits.iloc[f].this_visit].ALD_this_visit.values[0]:
-                    #             diag_folder = 'alcoholic'
-                    #         else:
-                    #             diag_folder = 'nonalcoholic'                            
-                    #     subj_path = base_dir + targ_folder + '\\' + diag_folder + '\\' 
-                    #     if not os.path.exists(subj_path):
-                    #         os.makedirs(subj_path) 
-                    #     src = base_dir + source_folder + '\\' + this_file
-                    #     trg = subj_path + this_file
-                    #     shutil.copy(src, trg)
+                    
+                    max_visit = max(svisits.this_visit)
+                    svisits = svisits[svisits.this_visit==max_visit]
+                    base_fn = ('_').join(svisits.iloc[0].fn.split('_')[:-1])
+
+
+                    if len(svisits)>4:
+                        
+                        # ssss = [s.split('_')[-1].split('.')[0] for s in svisits.fn]
+                        seg_fn = np.arange(0,5)                    
+                        lbl_224 = [str(i) for i in np.arange(0,224)]
+                        pac_avg = pd.DataFrame((np.zeros((224,224))), columns=lbl_224)
+                        
+                        for f in seg_fn:
+                            this_file = base_fn + '_t' + str(f) + '.jpg'
+                            
+                            if which_dx=='ALAB':
+                                if vinfo[vinfo.this_visit==max_visit].ALAB_this_visit.values[0]:
+                                    diag_folder = 'alcoholic'
+                                else:
+                                    diag_folder = 'nonalcoholic'
+                            elif which_dx=='AUD':
+                                if vinfo[vinfo.this_visit==max_visit].AUD_this_visit.values[0]:
+                                    diag_folder = 'alcoholic'
+                                else:
+                                    diag_folder = 'nonalcoholic'
+                            elif which_dx=='ALD':
+                                if vinfo[vinfo.this_visit==max_visit].ALD_this_visit.values[0]:
+                                    diag_folder = 'alcoholic'
+                                else:
+                                    diag_folder = 'nonalcoholic'   
+                                    
+                                    
+                            subj_path = base_dir + targ_folder + '\\' + diag_folder + '\\' 
+                            if not os.path.exists(subj_path):
+                                os.makedirs(subj_path) 
+                            src = base_dir + source_folder + '\\' + this_file
+                            trg = subj_path + this_file
+                            shutil.copy(src, trg)
+                            
+                            img = Image.open(src) 
+                            grayImage = img.convert('L')
+                            # grayImage.show()
+                            array = np.array(grayImage) 
+                            this_seg = pd.DataFrame(array,columns=lbl_224)
+                            pac_avg = pac_avg.add(this_seg, fill_value=0)
+                            
+                        pa = pac_avg.div(len(seg_fn))
+                        pa = pa.round()
+                        # CONVERT AVERAGE PAC MATRIX TO JPEG
+                        pa = Image.fromarray(np.array(pa))
+                        pa = pa.convert('L')
+                        trg = 'D:\\COGA_eec\\new_pac_fz_AVG\\' + base_fn + '.jpg'
+                        pa.save(trg)
+        
+        
+        
+if do_filter_by_subject:
+# MOVE PAC IMAGE FILES FROM SAME SUBJECT
+
+    import shutil
+    import random
+    from PIL import Image
+
+    use_pickle = False
+    which_dx = 'AUD' # AUD ALAB ALD
+    sex = '' # M F
+    min_age = 0 
+    max_age = 99
+    race = ''
+    flat_cut = 99999 # FLAT INTERVAL IN EEG SIGNAL (<1uV)
+    noise_cut = 99999 # NOISE INTERVAL IN EEG SIGNAL (>100uV)
+    channel = 'FZ'
+    channelstr = 'fz'
+    # flat_cut = 256
+    # noise_cut = 256
+
+    base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
+    source_folder = 'new_pac_' + channelstr # eeg_figures | new_pac | new_pac_fz
+    targ_folder = 'resnet_by_subj_a_' + channelstr + '_' + str(min_age) + '_' + str(max_age) + '_' + which_dx + '_%flat' + str(flat_cut) + '_%noise' + str(noise_cut) + '_' + sex + '_MULT'
+    whichEEGfileExtention = 'jpg' # png jpg
+    which_pacdat = 'pacdat_MASTER.pkl'
+
+    # CONSTANTS    
+    chan_i = 0 
+    visit_i = 3 
+    id_i = 4  
+
+    # GET FILE LIST WITH GIVEN EXTENSION FROM SOURCE FOLDER 
+    FileList = csd.get_file_list(base_dir + source_folder, whichEEGfileExtention)
+    # MAKE A DATAFRAME TO ENRICH WITH ADDITIONAL COLUMNS DERIVED FROM FILENAME INFO
+    file_info = pd.DataFrame(FileList, columns=['dir','fn'])
+    
+    c = [f.split('_')[chan_i] for f in  file_info.fn]
+    c = pd.DataFrame(c,columns=['channels'])
+    file_info.insert(0,'channels',c)
+
+    visitCodeList = [f.split('_')[visit_i][0] for f in  file_info.fn]
+    visitCodeList = [csd.convert_visit_code(v) for v in visitCodeList]    
+    v = pd.DataFrame(visitCodeList,columns=['this_visit'])
+    file_info.insert(0,'this_visit',v)
+    
+    v = [f.split('_')[id_i] for f in  file_info.fn]
+    v = pd.DataFrame(v,columns=['ID'])
+    file_info.insert(0,'ID',v)  
+    # EXCEPTIONS - REMOVING BECAUSE BELOW ID NOT CONVERTABLE INTO AN INTEGER
+    file_info[file_info.ID=='p0000079'] = 0
+    
+    # GET MASTER TABLE OUT 
+    pacdat = pd.read_pickle(base_dir + which_pacdat)
+    if len(sex)==0: 
+        
+        
+        # alc = pacdat[(pacdat.AUD_this_visit==True) & (pacdat.ald5sx_cnt>=6) & (pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age)]
+        # ctl = pacdat[(pacdat.AUD_this_visit==False) & (pacdat.ald5sx_cnt.isnull()) & (pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age)]
+        # pd_filtered = pd.concat([alc,ctl])
+        
+        pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age)]
+        # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.flat_score<=flat_cut) & (pacdat.noise_score<=noise_cut)]
+        # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & ((pacdat.perc_flat_slip1<=flat_cut) & (pacdat.max_noise<=noise_cut))]
+        # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.perc_flat_slip0<=flat_cut) & (pacdat.perc_noise_slip0<=noise_cut)]
+        # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.max_flat_slip0<=flat_cut) & (pacdat.max_noise_slip0<=noise_cut)]
+        # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & ((pacdat.max_flat<=flat_cut) | (pacdat.max_noise<=noise_cut)) & (pacdat.race==race)]
+        
+        sexlbl = 'both'
+
+    else:            
+        alc = pacdat[(pacdat.AUD_this_visit==True) & (pacdat.ald5sx_cnt>=6) & (pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.sex_x==sex)]
+        ctl = pacdat[(pacdat.AUD_this_visit==False) & (pacdat.ald5sx_cnt.isnull()) & (pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.sex_x==sex)]
+        pd_filtered = pd.concat([alc,ctl])
+        # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.sex_x==sex)  & (pacdat.max_flat_slip0<=flat_cut) & (pacdat.max_noise_slip0<=noise_cut)]
+        # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.sex==sex) & ((pacdat.max_flat<=flat_cut) | (pacdat.max_noise<=noise_cut))]
+        # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.sex==sex) & ((pacdat.max_flat<=flat_cut) | (pacdat.max_noise<=noise_cut)) & (pacdat.race==race)]
+        sexlbl = sex
+    
+    if use_pickle:
+        pd_filtered =  pd.read_pickle('D:\\COGA_eec\\TEMP\\pd_fn__16_25_AUD.pkl')
+
+    jpg_subj = set([int(i) for i in set(file_info.ID)])
+    pd_subj =  set([int(i) for i in set(pd_filtered.ID)])
+    overlap = jpg_subj.intersection(pd_subj)
+    
+    print(targ_folder)
+    filtered_N = str(len(set(pd_filtered.ID)))
+    qualifying_N = str(len(overlap))
+    total_N = str(len(pd_filtered))
+
+    print('There are N = ' + qualifying_N + ' subjects represented in PAC heatmap dataset')
+    print('out of ' + filtered_N + ' total subjects in this dataset')
+    print('total # files = ' + total_N)
+    print('Excluding EEG signals with:')
+    print(' - Ages ' + str(min_age) + '-' + str(max_age) + '')
+    print(' - Sex: ' + sexlbl)
+    print(' - flat intervals (<5uV) lasting longer than ' + str(flat_cut) + ' in duration (seconds)')
+    print(' - noise intervals (>100uV) lasting longer than ' + str(noise_cut) + ' in duration (seconds)')
+
+    # CYCLE THROUGH EVERY SUBJECT REPRESENTED IN FILES FROM SOURCE FOLDER
+    all_subj_figs = pd.unique(file_info.ID) 
+    # all_subj_figs = (np.array(list(overlap)))
+    for i in range(0,len(all_subj_figs)):
+        this_subj = all_subj_figs[i]
+        # this_subj = '10071029'
+        
+        # FIND ALL VISITS FOR A SUBJECT THEN FILTER BY AGE
+        svisits = file_info[(file_info.ID==this_subj)]
+        if len(svisits)>0:
+            # print(this_subj)
+
+            # WE WANT TO INCLUDE AUD DIAGNOSES IN FOLDER NAME FOR QUICK REF
+            vinfo = pd_filtered[(pd_filtered.ID==int(this_subj))]
+            if len(vinfo)>0:
+                
+                # sv CONTAINS ORDINALS FOR ALL VISITS FOR THIS SUBJECT FROM svisits
+                sv = list(set(svisits.this_visit.values))
+                # vi CONTAINS ORDINALS FOR VISITS THAT SATISFY AGE CRITERIA
+                vi = list(set(vinfo.this_visit.values))
+                # REMOVE VISITS NOT WITHIN AGE REQUIREMENTS FROM svisits
+                for vs in sv:
+                    if vs not in vi:
+                        svisits = svisits[svisits.this_visit!=vs]
+                        
+                    
+                if len(svisits)>0:
+                    
+                    
+                    max_visit = max(svisits.this_visit)
+                    svisits = svisits[svisits.this_visit==max_visit]
+                    base_fn = ('_').join(svisits.iloc[0].fn.split('_')[:-1])
+
+
+                    # if len(svisits)>0:
+                        
+                        # # ssss = [s.split('_')[-1].split('.')[0] for s in svisits.fn]
+                        # seg_fn = np.arange(0,5)                    
+                        # lbl_224 = [str(i) for i in np.arange(0,224)]
+                        # pac_avg = pd.DataFrame((np.zeros((224,224))), columns=lbl_224)
+                        
+                        # for f in seg_fn:
+                        #     this_file = base_fn + '_t' + str(f) + '.jpg'
+                            
+                        #     if which_dx=='ALAB':
+                        #         if vinfo[vinfo.this_visit==max_visit].ALAB_this_visit.values[0]:
+                        #             diag_folder = 'alcoholic'
+                        #         else:
+                        #             diag_folder = 'nonalcoholic'
+                        #     elif which_dx=='AUD':
+                        #         if vinfo[vinfo.this_visit==max_visit].AUD_this_visit.values[0]:
+                        #             diag_folder = 'alcoholic'
+                        #         else:
+                        #             diag_folder = 'nonalcoholic'
+                        #     elif which_dx=='ALD':
+                        #         if vinfo[vinfo.this_visit==max_visit].ALD_this_visit.values[0]:
+                        #             diag_folder = 'alcoholic'
+                        #         else:
+                        #             diag_folder = 'nonalcoholic'   
+                                    
+                                    
+                        #     subj_path = base_dir + targ_folder + '\\' + diag_folder + '\\' 
+                        #     if not os.path.exists(subj_path):
+                        #         os.makedirs(subj_path) 
+                        #     src = base_dir + source_folder + '\\' + this_file
+                        #     trg = subj_path + this_file
+                        #     shutil.copy(src, trg)
+                            
+                        #     img = Image.open(src) 
+                        #     grayImage = img.convert('L')
+                        #     # grayImage.show()
+                        #     array = np.array(grayImage) 
+                        #     this_seg = pd.DataFrame(array,columns=lbl_224)
+                        #     pac_avg = pac_avg.add(this_seg, fill_value=0)
+                            
+                        # pa = pac_avg.div(len(seg_fn))
+                        # pa = pa.round()
+                        # # CONVERT AVERAGE PAC MATRIX TO JPEG
+                        # pa = Image.fromarray(np.array(pa))
+                        # pa = pa.convert('L')
+                        # trg = 'D:\\COGA_eec\\new_pac_fz_AVG\\' + base_fn + '.jpg'
+                        # pa.save(trg)
+
+                            
+                            # fileListAll = csd.get_file_list(pth, whichEEGfileExtention)    
+                            # fileList_alc = csd.get_file_list(pth + 'alcoholic\\', whichEEGfileExtention)
+                            # alc = str(round((len(fileList_alc)/len(fileListAll))*100,1))
+                            
+                    
+                    
+                    for f in range(0,len(svisits)):
+                        this_file =  svisits.iloc[f].fn
+                        if which_dx=='ALAB':
+                            if vinfo[vinfo.this_visit==svisits.iloc[f].this_visit].ALAB_this_visit.values[0]:
+                                diag_folder = 'alcoholic'
+                            else:
+                                diag_folder = 'nonalcoholic'
+                        elif which_dx=='AUD':
+                            if vinfo[vinfo.this_visit==svisits.iloc[f].this_visit].AUD_this_visit.values[0]:
+                                diag_folder = 'alcoholic'
+                            else:
+                                diag_folder = 'nonalcoholic'
+                        elif which_dx=='ALD':
+                            if vinfo[vinfo.this_visit==svisits.iloc[f].this_visit].ALD_this_visit.values[0]:
+                                diag_folder = 'alcoholic'
+                            else:
+                                diag_folder = 'nonalcoholic'                            
+                        subj_path = base_dir + targ_folder + '\\' + diag_folder + '\\' 
+                        if not os.path.exists(subj_path):
+                            os.makedirs(subj_path) 
+                        src = base_dir + source_folder + '\\' + this_file
+                        trg = subj_path + this_file
+                        shutil.copy(src, trg)
+                        
+                        
+                        # rand_row = svisits.loc[random.choice(svisits.index)]
+                        # this_file =  rand_row.fn
+                        # if which_dx=='ALAB':
+                        #     if vinfo[vinfo.this_visit==rand_row.this_visit].ALAB_this_visit.values[0]:
+                        #         diag_folder = 'alcoholic'
+                        #     else:
+                        #         diag_folder = 'nonalcoholic'
+                        # elif which_dx=='AUD':
+                        #     if vinfo[vinfo.this_visit==rand_row.this_visit].AUD_this_visit.values[0]:
+                        #         diag_folder = 'alcoholic'
+                        #     else:
+                        #         diag_folder = 'nonalcoholic'
+                        # elif which_dx=='ALD':
+                        #     if vinfo[vinfo.this_visit==rand_row.this_visit].ALD_this_visit.values[0]:
+                        #         diag_folder = 'alcoholic'
+                        #     else:
+                        #         diag_folder = 'nonalcoholic'
+                        # subj_path = base_dir + targ_folder + '\\' + diag_folder + '\\' 
+                        # if not os.path.exists(subj_path):
+                        #     os.makedirs(subj_path) 
+                        # src = base_dir + source_folder + '\\' + this_file
+                        # trg = subj_path + this_file
+                        # shutil.copy(src, trg)
             
     print('\n ~~~~~~ There are N = ' + str(len(all_subj_figs)) + ' subjects in this dataset \n')
             
