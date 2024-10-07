@@ -301,10 +301,11 @@ for sev in severity_scores:
                 # MAKING THIS MORE EXPLICIT SO THAT THERE ARE NO DUPLICATES OF 
                 # SUBJECTS AND NUMBER OF AUD IS MAXIMIZED
                 # aaa = set(pd_fn_df[(pd_fn_df.AUD_this_visit==True) & (pd_fn_df.ald5sx_cnt>=sev[0]) & (pd_fn_df.ald5sx_cnt<=sev[1]) & (pd_fn_df.alc_dep_sx2==5)].ID)
-                aaa = set(pd_fn_df[(pd_fn_df.AUD_this_visit==True) & (pd_fn_df.ald5sx_cnt>=sev[0]) & (pd_fn_df.ald5sx_cnt<=sev[1])].ID)
+                # aaa = set(pd_fn_df[(pd_fn_df.AUD_this_visit==True) & (pd_fn_df.ald5sx_cnt>=sev[0]) & (pd_fn_df.ald5sx_cnt<=sev[1])].ID)
                 # aaa = set(pd_fn_df[(pd_fn_df.AUD_this_visit==True) & (pd_fn_df.alc_dep_sx1!=5) & (pd_fn_df.alc_dep_sx2==5)].ID)
                 # aaa = set(pd_fn_df[(pd_fn_df.AUD_this_visit==True) & (pd_fn_df.alc_dep_sx1==5) & (pd_fn_df.alc_dep_sx2=!=5)].ID)
-                # aaa = set(pd_fn_df[(pd_fn_df.AUD_this_visit==True) & (pd_fn_df.alc_dep_sx1==5) & (pd_fn_df.alc_dep_sx2==5)].ID)
+                aaa = set(pd_fn_df[(pd_fn_df.AUD_this_visit==True) & (pd_fn_df.alc_dep_sx1==5) & (pd_fn_df.alc_dep_sx2==5)].ID)
+                aaa_lbl = '_tol_wdrl'
 
                 uuu = set(pd_fn_df[(pd_fn_df.AUD_this_visit==False)].ID)
                 
@@ -362,13 +363,13 @@ for sev in severity_scores:
                 df1 = pd_filtered_age_balanced.iloc[:,s1:e1+1]
                 df2 = pd_filtered_age_balanced.iloc[:,s2:e2+1]
                 df3 = pd.merge(df1,df2,left_index=True, right_index=True)
-                ss=[]
+                ss = []
                 for i in range(0,11): ss.append( ((np.sum(df3.iloc[:,i]==5))/(len(df3)/2))*100 )
                 
                 fig, ax = plt.subplots()
                 ax.bar(criteria_lbls,ss)
                 plt.xticks(rotation=90)
-                plt.title(targ_folder)
+                plt.title(targ_folder + aaa_lbl)
                 plt.ylabel('% subjects with criterion')
                 plt.ylim([0,100])
                 plt.show()
