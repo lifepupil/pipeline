@@ -6,6 +6,7 @@ processed*
 proc_*/
 ref_fc2*
 ref_o2*
+pacdat 
 
 *.pyc
 *.pkl
