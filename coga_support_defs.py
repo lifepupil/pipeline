@@ -312,7 +312,7 @@ def convert_visit_code(vc):
 def match_age2(group1,group2,seeds, ttl):
     import pandas as pd
     import matplotlib.pyplot as plt
-
+    import numpy as np
     
     group1 = group1.sample(frac=1, random_state=seeds[0]).reset_index(drop=True)
     group2 = group2.sample(frac=1, random_state=seeds[1]).reset_index(drop=True)
@@ -324,19 +324,35 @@ def match_age2(group1,group2,seeds, ttl):
     group2_ind = []
     group1_ind = []
     
-    minage = int(min(group2.age_this_visit))
-    maxage = int(max(group2.age_this_visit))
+    minage = int(min(  int(min(group1.age_this_visit)),int(min(group2.age_this_visit))  ))
+    maxage = int(max(  int(max(group1.age_this_visit)),int(max(group2.age_this_visit))  ))
     # ttl = 'Ages ' + str(minage) + '-' + str(maxage) + ', AUD N=' + str(len(group2)) + ', ctl N=' + str(len(group1))
     pltlog = True
         
+    bins = np.linspace(minage, maxage, maxage-minage+1)
+    ga1 = group1[['age_this_visit']].values[:,0]
+    ga2 = group2[['age_this_visit']].values[:,0]
+    N = len(ga2)
+    
     # pd.concat([group1,group2]).plot.hist(column=["age_this_visit"], by="AUD_this_visit", title='AUD and non-AUD age distributions')
-    plt.hist(group1[['age_this_visit']], bins=(maxage-minage), label='unaffected', edgecolor='black', color='w', log=pltlog)
-    plt.hist(group2[['age_this_visit']], bins=(maxage-minage), label='AUD', alpha=0.5, color='b', log=pltlog)
+    # plt.hist([ga1,ga2], bins=bins, label=['unaffected','AUD'], log=pltlog)
+    plt.hist(ga1, bins=bins, label='unaffected', edgecolor='black', color='w', log=pltlog) #, align='right')
+    plt.hist(ga2, bins=bins, label='AUD', alpha=0.5, color='b', log=pltlog) #, ax=ax1) #, align='right')
     plt.xlabel('Age')
     plt.ylabel('Frequency')
-    plt.title(ttl)
+    plt.ylim([1,1000])
+    plt.title(ttl + ', AUD_N=' + str(N))
     plt.legend()
     plt.show()
+    
+    # pd.concat([group1,group2]).plot.hist(column=["age_this_visit"], by="AUD_this_visit", title='AUD and non-AUD age distributions')
+    # plt.hist(group1[['age_this_visit']], bins=(maxage-minage), label='unaffected', edgecolor='black', color='w', log=pltlog)
+    # plt.hist(group2[['age_this_visit']], bins=(maxage-minage), label='AUD', alpha=0.5, color='b', log=pltlog)
+    # plt.xlabel('Age')
+    # plt.ylabel('Frequency')
+    # plt.title(ttl)
+    # plt.legend()
+    # plt.show()
     
     ages = range(minage,maxage+1,1)
     
