@@ -1,3 +1,14 @@
-*.jpg
-*.png
-*.npz
+processed/
+references/
+reference*
+procressed*/
+processed*
+proc_*/
+ref_fc2*
+ref_o2*
+
+*.pyc
+*.pkl
+*.o*
+
+references_test
