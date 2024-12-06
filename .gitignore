@@ -11,5 +11,8 @@ pacdat
 *.pyc
 *.pkl
 *.o*
+*.jpg
+*.png
+*.npz
 
 references_test
