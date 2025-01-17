@@ -20,6 +20,8 @@ import datetime
 from sklearn.linear_model import LinearRegression
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
+from matplotlib.collections import LineCollection
+from age_matcher import AgeMatcher
 
 multvis = True
 SEX = [ '' ]
@@ -40,6 +42,7 @@ alpha = 0.05
 do_pd_fn_df = True
 do_pd_fab = False
 
+source_folder = 'new_pac_fz_AVG_0_3'
 base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
 temp_dir = 'TEMP\\'
 do_random_segment = False
@@ -92,8 +95,8 @@ reglbl = '_fp_' + fpl_lbl + '__' + fph_lbl +'_fa_' + fal_lbl + '__' + fah_lbl
 
 
 # # HELPS TO GET AVAILABLE FREQUENCIES
-fa[(fa.freq>=49) & (fa.freq<=50)]
-fp[(fp.freq>=4.8) & (fp.freq<=5.5)]
+# fa[(fa.freq>=49) & (fa.freq<=50)]
+# fp[(fp.freq>=4.8) & (fp.freq<=5.5)]
 
 
         
@@ -142,7 +145,6 @@ for sev in severity_scores:
                 os.makedirs(write_dir) 
       
             channelstr = channel.lower()
-            source_folder = 'new_pac_' + channelstr + '_AVG' # eeg_figures | new_pac | new_pac_fz
             targ_folder = '' + channelstr + '_' + str(min_age) + '_' + str(max_age) + '_' + which_dx + '_' + sex + '_' + sev[2] + '_' + str(sev[0]) + '_' + str(sev[1])
             
             print('START: ' + str(start_dt))
@@ -181,11 +183,10 @@ for sev in severity_scores:
             
             # GET MASTER TABLE OUT 
             pacdat = pd.read_pickle(base_dir + which_pacdat)            
+            # DO THIS TO GET EVERYTHING OUT THAT IS IN pacdat E.G. FOR LINEAR MIXED EFFECT MODELING USING ENTIRE DATASET
             if 1: 
                 pd_filtered = pacdat[(pacdat.channel==channel)].copy()
                 sexlbl = 'both'
-
-            
             else:             
                 pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.sex_x==sex)].copy()
                 # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.sex==sex) & ((pacdat.max_flat<=flat_cut) | (pacdat.max_noise<=noise_cut))]
@@ -440,12 +441,9 @@ for sev in severity_scores:
             
             for targ_folder in datasets:
             
-                pth = base_dir + 'new_pac_fz_AVG' + '\\'
+                pth = base_dir + source_folder + '\\'
 
-                
-            
-                pval_mx = np.zeros((224,224))
-                effect_mx = np.zeros((224,224))
+
                 
                 # INPUT DATA AND LABELS 
                 images = np.zeros((1,224,224))
@@ -485,9 +483,7 @@ for sev in severity_scores:
                     else:
                         missing += 1
                         print(fname + ' missing, ' + str(missing))
-
-
-
+                np.save('C:\\Users\\lifep\\OneDrive\\Documents\\pac_3d_' + targ_folder + '.npy', images)
 
                 # labels_dx = np.array(labels_dx)[1:]
                 # labels_dx = labels_dx.astype(int)
@@ -516,20 +512,102 @@ for sev in severity_scores:
                     # # MEANT TO NEST SUBJECTS IN THEIR RESPECTIVE FAMILIES
                     # # DOES NOT SEEM TO MAKE A DIFFERENCE WHETHER USE 'ID' OR 'subject_family'
                     # pac_age['subject_family'] = pac_age['ID'].astype(str) + "_" + pac_age['family'].astype(str)
-
                     sbjs = list(set(pac_age.ID))
                     pac_age['visit_cnt'] = np.ones(len(pac_age))
                     for s in sbjs:
                         idx = pac_age[pac_age.ID==s].index
                         vnum = len(pac_age[pac_age.ID==s])
                         pac_age.loc[idx,'visit_cnt'] = np.ones(len(idx))*vnum
-                    pac_age.to_pickle('C:\\Users\\lifep\\OneDrive\\Documents\\pac_age.pkl')
-                        
-                                                          
-                    # pa_alc = pac_age[pac_age.AUD==1]
-                    pa_alc = pac_age[pac_age.audcnt>=6]
-                    pa_ctl = pac_age[pac_age.audcnt==0]
+                    pac_age.to_pickle('C:\\Users\\lifep\\OneDrive\\Documents\\pac_age_' + targ_folder + '.pkl')
+                    
+                    # MAKE SURE THAT THE INDEXING IS IDENTICAL BETWEEN pac_age AND images 
+                    # THEY MUST ALSO HAVE THE SAME LENGTH, E.G., 8781
+                    pac_age = pd.read_pickle('C:\\Users\\lifep\\OneDrive\\Documents\\pac_age_' + targ_folder + '.pkl')
+                    images = np.load('C:\\Users\\lifep\\OneDrive\\Documents\\pac_3d_' + targ_folder + '.npy')
+                    
+                    pa_alc = pac_age[(pac_age.audcnt>=6)] # & (pac_age.sex=='F')]
+                    pa_ctl = pac_age[(pac_age.audcnt==0)] # & (pac_age.sex=='F')]
                     ttl = targ_folder + ' alc_' + str(len(pa_alc)) + ' unaff_' + str(len(pa_ctl)) 
+                    
+                    matcher = AgeMatcher(age_tol=1, age_col='age', strategy='greedy', shuffle_df=True, random_state=42)
+                    matched_cases, matched_controls = matcher(pa_alc, pa_ctl)
+
+                    
+                    pval_mx = np.zeros((224,224))
+                    effect_mx = np.zeros((224,224))
+                    aud_mx = np.zeros((224,224))
+                    ctl_mx = np.zeros((224,224))
+                    print('doing statistics on all PAC frequency pairs')
+                    # images = np.load('C:\\Users\\lifep\\OneDrive\\Documents\\pac_3d_' + targ_folder + '.npy')
+
+                    for x in range(224):
+                        for y in range(224):
+                            # print(str(x) + ' ' + str(y))
+                            alc_i = np.where(pac_age.AUD==1)
+                            unaff_i = np.where(pac_age.AUD==0)
+                            alc_pac = images[alc_i,x,y][0]
+                            unaff_pac = images[unaff_i,x,y][0]
+                            # stats = ttest_ind(alc_pac[0], unaff_pac[0], equal_var=False)
+                            stats = mannwhitneyu(alc_pac, unaff_pac)
+                            pval_mx[x,y] = stats.pvalue
+                            effect_mx[x,y] = np.mean(alc_pac) -  np.mean(unaff_pac)
+                            aud_mx[x,y] = np.mean(alc_pac)
+                            ctl_mx[x,y] = np.mean(unaff_pac)
+                    pv = pd.DataFrame(pval_mx,  columns=freq_pha, index=freq_amp)
+                    pv[pv>0.05] = 0.05
+                    hmmin = str(round(np.min(pv),6))
+                    hm = sns.heatmap(pv, vmax=0.05,cmap="rocket_r", cbar_kws={'label': 'p-value (min=' + hmmin + ')'})
+                    plt.title(targ_folder, fontsize = 9)
+                    plt.xlabel('Phase Frequency (Hz)', fontsize = 9) 
+                    plt.ylabel('Amplitude Frequency (Hz)', fontsize = 9)    
+                    output = plt.Axes.get_figure(hm)
+                    
+                    if not os.path.exists(write_dir):
+                        os.makedirs(write_dir) 
+                        
+                    output.savefig(write_dir + ttl + '-PVALUES.jpg', bbox_inches='tight')
+                    plt.show()
+                    plt.close(output)
+
+                    es = pd.DataFrame(effect_mx,  columns=freq_pha, index=freq_amp)
+                    hm = sns.heatmap(es, cmap="icefire", cbar_kws={'label': 'diff mean PAC strength (AUD - unaff)'}, vmin=vmin, vmax=vmax)
+                    plt.title(ttl, fontsize = 9)
+                    plt.xlabel('Phase Frequency (Hz)', fontsize = 9) 
+                    plt.ylabel('Amplitude Frequency (Hz)', fontsize = 9)
+                    output = plt.Axes.get_figure(hm)
+                    plt.show()
+                    output.savefig(write_dir + ttl + '_EFFECTSIZE', bbox_inches='tight')
+                    plt.close(output)
+                    
+                    pv[pv>=alpha] = 0
+                    hm = sns.heatmap(es, cmap="icefire", cbar_kws={'label': 'diff mean PAC strength (AUD - unaff)'}, mask=(pv==0), vmin=vmin, vmax=vmax)
+                    plt.title(ttl, fontsize = 9)
+                    plt.xlabel('Phase Frequency (Hz)', fontsize = 9) 
+                    plt.ylabel('Amplitude Frequency (Hz)', fontsize = 9)
+                    output = plt.Axes.get_figure(hm)
+                    output.savefig(write_dir + ttl + '-EFFECTSIZExPVAL', bbox_inches='tight')
+                    plt.show()
+                    plt.close(output)
+                    
+                    es = pd.DataFrame(aud_mx,  columns=freq_pha, index=freq_amp)
+                    hm = sns.heatmap(es, cmap="icefire", cbar_kws={'label': 'AUD mean PAC strength'}, vmin=vmin, vmax=vmax)
+                    plt.title(ttl, fontsize = 9)
+                    plt.xlabel('Phase Frequency (Hz)', fontsize = 9) 
+                    plt.ylabel('Amplitude Frequency (Hz)', fontsize = 9)
+                    output = plt.Axes.get_figure(hm)
+                    plt.show()
+                    output.savefig(write_dir + ttl + '_AUDMEAN', bbox_inches='tight')
+                    plt.close(output)
+                    
+                    es = pd.DataFrame(ctl_mx,  columns=freq_pha, index=freq_amp)
+                    hm = sns.heatmap(es, cmap="icefire", cbar_kws={'label': 'diff mean PAC strength (AUD - unaff)'}, vmin=vmin, vmax=vmax)
+                    plt.title(ttl, fontsize = 9)
+                    plt.xlabel('Phase Frequency (Hz)', fontsize = 9) 
+                    plt.ylabel('Amplitude Frequency (Hz)', fontsize = 9)
+                    output = plt.Axes.get_figure(hm)
+                    plt.show()
+                    output.savefig(write_dir + ttl + '_UNAFFMEAN', bbox_inches='tight')
+                    plt.close(output)
                     
 
                     # EXCLUDE SUBJECTS WITH ONLY ONE VISIT
@@ -543,30 +621,28 @@ for sev in severity_scores:
                     # paa = pa_alc[pa_alc.visit>0]
                     # paa = pa_ctl[pa_ctl.visit>1]
                     # paa = pa_ctl.copy()
-                    paa = pac_age.copy()
-                    sbs = pd.unique(paa.ID)
-                    lines = []
-                    for s in sbs:
-                        tmp = paa[paa.ID==s]
-                        # if len(tmp)>1:
-                        # tmp = paa[paa.ID==sbs[]]
-                        x = tmp['age'].to_list()
-                        y = tmp.PAC.to_list()
-                        # z = np.vstack((x, y)).T
-                        z = list(zip(x,y))
-                        if len(z)<2:
-                            z.append(tuple([z[0][0],int(z[0][1])]))
-                        lines.append(z)
-
-                    cmap = plt.get_cmap('viridis')
-
-                    fig, ax = plt.subplots(1)
-                    line_segments = LineCollection(lines, cmap=cmap)
-                    ax.add_collection(line_segments)
-                    ax.autoscale_view()
-                    plt.xlim([1,75])
-                    plt.ylim([0,220])
-                    plt.show()
+                    # paa = pa_alc.copy()
+                    # sbs = pd.unique(paa.ID)
+                    # lines = []
+                    # for s in sbs:
+                    #     tmp = paa[paa.ID==s]
+                    #     # if len(tmp)>1:
+                    #     # tmp = paa[paa.ID==sbs[]]
+                    #     x = tmp['age'].to_list()
+                    #     y = tmp.PAC.to_list()
+                    #     # z = np.vstack((x, y)).T
+                    #     z = list(zip(x,y))
+                    #     if len(z)<2:
+                    #         z.append(tuple([z[0][0],int(z[0][1])]))
+                    #     lines.append(z)
+                    # cmap = plt.get_cmap('viridis')
+                    # fig, ax = plt.subplots(1)
+                    # line_segments = LineCollection(lines, cmap=cmap)
+                    # ax.add_collection(line_segments)
+                    # ax.autoscale_view()
+                    # plt.xlim([10,40])
+                    # plt.ylim([150,220])
+                    # plt.show()
                     
                     
 

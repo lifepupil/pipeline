@@ -24,10 +24,11 @@ race = ''
 channel = 'FZ'
 channelstr = 'fz'
 start_seg = 0
-end_seg = 5
+end_seg = 3
 
 base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
 source_folder = 'new_pac_' + channelstr # eeg_figures | new_pac | new_pac_fz
+write_folder = 'new_pac_fz_AVG' + '_' + str(start_seg) + '_' + str(end_seg)
 whichEEGfileExtention = 'jpg' # png jpg
 which_pacdat = 'pacdat_MASTER.pkl'
 
@@ -123,5 +124,7 @@ for i in range(0,len(all_subj_figs)):
                 # CONVERT AVERAGE PAC MATRIX TO JPEG
                 pa = Image.fromarray(np.array(pa))
                 pa = pa.convert('L')
-                trg = 'D:\\COGA_eec\\new_pac_fz_AVG\\' + base_fn + '.jpg'
-                pa.save(trg)
+                trg = 'D:\\COGA_eec\\' + write_folder + '\\' 
+                if not os.path.exists(trg):
+                    os.makedirs(trg)
+                pa.save(trg + base_fn + '.jpg')

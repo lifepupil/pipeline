@@ -27,17 +27,17 @@ import datetime
 # eeg_segments = ['t0', 't1', 't2', 't3', 't4', 't5', 't6', 't7']
 # eeg_segments.reverse()
 
-SEX = ['' ]
+SEX = ['' , 'M' , 'F']
 # age_groups = [[17,29],[30,39],[40,75]]
 # age_groups = [[25,35],[35 ,45],[45,75]]
 # age_groups = [[25,37],[38,50]]
-age_groups = [[0,99]]
+age_groups = [[25,50]]
 
 grps = [3,3,3]
 shuf_seeds = [42,42]
 
-severity_scores = [[6,11,'MOD_SEV']]
-# severity_scores = [[6,11,'SEVERE']]
+# severity_scores = [[6,11,'MOD_SEV']]
+severity_scores = [[6,11,'SEVERE']]
 # severity_scores = [[6,11,'SEVERE_wthdrl_no_tol']]
 yalc = [20,100]
 
@@ -166,7 +166,8 @@ for sev in severity_scores:
                 os.makedirs(write_dir) 
       
             channelstr = channel.lower()
-            source_folder = 'new_pac_' + channelstr + '_AVG' # eeg_figures | new_pac | new_pac_fz
+            # source_folder = 'new_pac_' + channelstr + '_AVG' # eeg_figures | new_pac | new_pac_fz
+            source_folder = 'new_pac_fz_AVG_0_3' 
             targ_folder = 'PAC_stats_' + channelstr + '_' + str(min_age) + '_' + str(max_age) + '_' + which_dx + '_' + sex + '_' + sev[2] + '_' + str(sev[0]) + '_' + str(sev[1])
             
             print('START: ' + str(start_dt))
@@ -644,11 +645,7 @@ for sev in severity_scores:
                     # effect_mx = np.mean(alc_pac[0]) -  np.mean(unaff_pac[0])
                     # es = pd.DataFrame(effect_mx,  columns=freq_pha, index=freq_amp)
                     es_region = es.iloc[fa_hi:fa_lo, fp_lo:fp_hi]
-                    reglbl = '_fa_' + str(fa_hi) + '_' + str(fa_lo) + '_fp_' + str(fp_lo) + '_' + str(fp_hi)
-
-
-
-                    
+                    reglbl = '_fa_' + str(fa_hi) + '_' + str(fa_lo) + '_fp_' + str(fp_lo) + '_' + str(fp_hi)                   
                     
                     regions = [0]*len(images)
                     for thispac in range(len(images)):
