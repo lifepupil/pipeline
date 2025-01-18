@@ -19,19 +19,20 @@ from age_matcher import AgeMatcher
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
 
+new_test = True
 SEX = 'M' 
 channel = 'FZ'
-min_age = 25
-max_age = 50
-# min_age = 1
-# max_age = 99
-vmin = -3
-vmax = 3
+# min_age = 25
+# max_age = 50
+min_age = 1
+max_age = 99
 severity_scores = [6,11,'SEVERE']
 alpha = 0.05
 which_dx = 'AUD' # AUD ALAB ALD
-
 fldrname = 'LMM'
+vmin = -3
+vmax = 3
+
 
 write_dir = 'C:\\Users\\lifep\\OneDrive - Downstate Medical Center\\PAC stats paper\\' + fldrname + '\\'
 if not os.path.exists(write_dir):
@@ -66,7 +67,7 @@ ttl = targ_folder + ' alc_' + str(len(pa_alc)) + ' unaff_' + str(len(pa_ctl))
 print('\n ' + ttl)
 
 
-if 0:    
+if new_test:    
     pval_mx = np.zeros((224,224))
     effect_mx = np.zeros((224,224))
     
