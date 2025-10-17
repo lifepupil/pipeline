@@ -29,7 +29,7 @@ age_groups = [[1,99]]
 grps = [0,0,0]
 vmin = -3
 vmax = 3
-shuf_seeds = [42,42]
+shuf_seeds = [424242,424242]
 
 severity_scores = [[0,11,'ALL']]
 # severity_scores = [[6,11,'SEVERE']]
@@ -42,7 +42,7 @@ alpha = 0.05
 do_pd_fn_df = True
 do_pd_fab = False
 
-source_folder = 'new_pac_fz_AVG_0_3'
+source_folder = 'new_pac_fz_AVG_0_0_NOBORDER'
 base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
 temp_dir = 'TEMP\\'
 do_random_segment = False
@@ -483,7 +483,7 @@ for sev in severity_scores:
                     else:
                         missing += 1
                         print(fname + ' missing, ' + str(missing))
-                np.save('C:\\Users\\lifep\\OneDrive\\Documents\\pac_3d_' + targ_folder + '.npy', images)
+                np.save(base_dir + 'pac_3d_' + targ_folder + '.npy', images)
 
                 # labels_dx = np.array(labels_dx)[1:]
                 # labels_dx = labels_dx.astype(int)
@@ -673,12 +673,12 @@ for sev in severity_scores:
 
                     ax1 = pa_ctl.plot(y='PAC',x='age', c='b', kind='scatter', label='Unaff', title=ttl + '\n' + reglbl, s=2)
                     pa_alc.plot(y='PAC',x='age', c='r', kind='scatter',label='AUD', ax=ax1, s= 2)
-                    plt.xlim([10,75])
-                    plt.ylim([0,255])
+                    plt.xlim([24,51])
+                    plt.ylim([100,255])
                     plt.show()
                     
                     pa_alc.plot(y='PAC',x='age', c='r', kind='scatter',label='AUD', s= 2, title=ttl + '\n' + reglbl)
-                    plt.xlim([10,75])
+                    plt.xlim([25,50])
                     plt.ylim([0,255])
                     plt.show()
                     
@@ -689,26 +689,37 @@ for sev in severity_scores:
                                       
                     X = pa_alc.age.values #.reshape((-1, 1)) 
                     y = pa_alc.PAC.values 
-                    slope, intercept, r_value, p_value, std_err = linregress(X,y)
+                    res = linregress(X,y)
+                    plt.plot(X,y,'o', label='AUD')
+                    plt.plot(X, res.intercept + res.slope*X, 'r', label='fitted line')
+                    plt.legend()
+                    plt.show()
                     
                     print('AUD')                 
-                    print('slope = ' + str(slope))
-                    print('intercept = ' + str(intercept))
-                    print('r_value = ' + str(r_value))
-                    print('std_err = ' + str(std_err))
-                    print('r^2 = ' + str((r_value**2)))
+                    print('p = ' + str(res.pvalue))
+                    print('slope = ' + str(res.slope))
+                    print('intercept = ' + str(res.intercept))
+                    print('r_value = ' + str(res.rvalue))
+                    print('std_err = ' + str(res.stderr))
+                    print('r^2 = ' + str((res.rvalue**2)))
                     print('\n')
                     
                     X = pa_ctl.age.values #.reshape((-1, 1)) 
                     y = pa_ctl.PAC.values 
-                    slope, intercept, r_value, p_value, std_err = linregress(X,y)
+                    res = linregress(X,y)
+                    plt.plot(X,y,'o', label='AUD')
+                    plt.plot(X, res.intercept + res.slope*X, 'r', label='fitted line')
+                    plt.legend()
+                    plt.show()
                     
                     print('Unaffected')                 
-                    print('slope = ' + str(slope))
-                    print('intercept = ' + str(intercept))
-                    print('r_value = ' + str(r_value))
-                    print('std_err = ' + str(std_err))
-                    print('r^2 = ' + str((r_value**2)))
+                    print('p = ' + str(res.pvalue))
+                    print('slope = ' + str(res.slope))
+                    print('intercept = ' + str(res.intercept))
+                    print('r_value = ' + str(res.rvalue))
+                    print('std_err = ' + str(res.stderr))
+                    print('r^2 = ' + str((res.rvalue**2)))
+                    print('\n')
                     
                     # bins = 20
                     minpac = int(round(min(pac_age.PAC),0))-1

@@ -17,7 +17,6 @@ import matplotlib.pyplot as plt
 from scipy.stats import ttest_ind, mannwhitneyu, sem, linregress
 
 
-use_pickle = False
 sex = '' # M F
 min_age = 1
 max_age = 99
@@ -26,11 +25,14 @@ end_seg = 3
 channel = 'FZ'
 channelstr = 'fz'
 pac_len = 224
-
+# TO REMOVE BORDER SET BELOW TO NON-ZERO INTEGER VALUES CORRESPONDING 
+# TO NUMBER OF ROWS OR COLUMNS TO REMOVE FROM MATRIX
+border_tb = 0
+border_rl = 0
 
 base_dir = 'D:\\COGA_eec\\' #  BIOWIZARD
 source_folder = 'new_pac_fz' 
-targ_folder = 'new_pac_' + channelstr + '_AVG_' + str(start_seg) + '_' + str(end_seg) + '_NOBORDER_test'
+targ_folder = 'new_pac_' + channelstr + '_AVG_' + str(start_seg) + '_' + str(end_seg) + '_NOBORDER_' + str(border_tb) + '_'  + str(border_rl)
 whichEEGfileExtention = 'jpg' # png jpg
 which_pacdat = 'pacdat_MASTER.pkl'
 
@@ -90,9 +92,6 @@ else:
     # pd_filtered = pacdat[(pacdat.channel==channel) & (pacdat.age_this_visit>=min_age) & (pacdat.age_this_visit<=max_age) & (pacdat.sex==sex) & ((pacdat.max_flat<=flat_cut) | (pacdat.max_noise<=noise_cut)) & (pacdat.race==race)]
     sexlbl = sex
 
-if use_pickle:
-    pd_filtered =  pd.read_pickle('D:\\COGA_eec\\TEMP\\pd_fn__16_25_AUD.pkl')
-
 jpg_subj = set([int(i) for i in set(file_info.ID)])
 pd_subj =  set([int(i) for i in set(pd_filtered.ID)])
 overlap = jpg_subj.intersection(pd_subj)
@@ -118,20 +117,20 @@ jpg_record = []
 missing_jpgs = []
 
 seg_fn = np.arange(start_seg,end_seg+1)                    
-lbl_224 = [str(i) for i in np.arange(0,224)]
-lbl_214 = [str(i) for i in np.arange(0,214)]
-lbl_212 = [str(i) for i in np.arange(0,212)]
+lbl_224 = [str(i) for i in np.arange(0,pac_len)]
+lbl_RL = [str(i) for i in np.arange(0,pac_len-border_rl*2)]
+lbl_TB = [str(i) for i in np.arange(0,pac_len-border_tb*2)]
 
 # EXPECTED BORDER EDGES 
 # box=(left, upper, right, lower)
-pac_image = (5, 6, pac_len-5, pac_len-6)
+pac_image = (border_rl, border_tb, (pac_len-border_rl), (pac_len-border_tb))
 
 # CYCLE THROUGH EVERY SUBJECT REPRESENTED IN FILES FROM SOURCE FOLDER
 all_subj_figs = pd.unique(file_info.ID) 
 # all_subj_figs = (np.array(list(overlap)))
 for i in range(0,len(all_subj_figs)):
-    # this_subj = all_subj_figs[i]
-    this_subj = '61174006'
+    this_subj = all_subj_figs[i]
+    # this_subj = '61174006'
     
     # FIND ALL VISITS FOR A SUBJECT 
     svisits = file_info[(file_info.ID==this_subj)]
@@ -155,14 +154,13 @@ for i in range(0,len(all_subj_figs)):
             if len(svisits)>0:
 
                 visit_order = list(set(svisits.this_visit))
+                
                 for vo in visit_order:
-                    
                     svisit = svisits[svisits.this_visit==vo]
-                    
                     if len(svisit)>=end_seg+1:
 
                         base_fn = ('_').join(svisit.iloc[0].fn.split('_')[:-1])
-                        pac_avg = pd.DataFrame((np.zeros((212,214))), columns=lbl_214, index=lbl_212)
+                        pac_avg = pd.DataFrame((np.zeros((pac_len-border_tb*2,pac_len-border_rl*2))), columns=lbl_RL, index=lbl_TB)
                             
                         for f in seg_fn:
                             this_file = base_fn + '_t' + str(f) + '.jpg'                                
@@ -214,18 +212,17 @@ for i in range(0,len(all_subj_figs)):
                                 # plt.plot( abs( (to.var(axis=0))) )
                                 # plt.plot( abs(np.diff(to.var(axis=0))))
                                 # plt.plot( abs(np.diff(ti.var(axis=1))))
-                            
-                            
-                            top = (this_seg.iloc[pac_len-6:pac_len,30:200]).to_numpy().reshape(1,6*170)[0]
+
+                            top = (this_seg.iloc[pac_len-border_tb:pac_len,30:200]).to_numpy().reshape(1,border_tb*170)[0]
                             top_record.append( (len(top[top>240])/len(top))*100 )
                             
-                            bottom = (this_seg.iloc[0:6,30:200]).to_numpy().reshape(1,6*170)[0]
+                            bottom = (this_seg.iloc[0:border_tb,30:200]).to_numpy().reshape(1,border_tb*170)[0]
                             bottom_record.append( (len(bottom[bottom>240])/len(bottom))*100 )
     
-                            left = (this_seg.iloc[30:200,0:5]).to_numpy().reshape(1,5*170)[0]
+                            left = (this_seg.iloc[30:200,0:border_rl]).to_numpy().reshape(1,border_rl*170)[0]
                             left_record.append( (len(left[left>240])/len(left))*100 )
                             
-                            right = (this_seg.iloc[30:200,224-5:224]).to_numpy().reshape(1,5*170)[0]
+                            right = (this_seg.iloc[30:200,224-border_rl:224]).to_numpy().reshape(1,border_rl*170)[0]
                             right_record.append( (len(right[right>240])/len(right))*100 )
                             
                             jpg_record.append( this_file )
@@ -235,7 +232,7 @@ for i in range(0,len(all_subj_figs)):
                             grayImage = trimmed_image.convert('L')
                             # grayImage.show()
                             array = np.array(grayImage) 
-                            this_seg = pd.DataFrame(array, columns=lbl_214, index=lbl_212)
+                            this_seg = pd.DataFrame(array, columns=lbl_RL, index=lbl_TB)
                             pac_avg = pac_avg.add(this_seg, fill_value=0)
                         
                         # if (all(pac_avg==0)) | (f!=seg_fn[-1]) | (any(pac_avg>255)):

@@ -22,14 +22,14 @@ import string
 import scipy.stats as stats
 # import sympy as sp
 # import pyprep as pp
-# import mne
-# from mne.preprocessing import ICA
+import mne
+from mne.preprocessing import ICA
 # import torch
 # import torch.nn as nn
 # import torch.optim as optim
 
 # import mne_icalabel as mica
-# from mne_icalabel import label_components
+from mne_icalabel import label_components
 import os
 # import sys
 import matplotlib as mpl
@@ -127,6 +127,10 @@ if make_data_table:
     sex_dict = {1: 'M', 2: 'F'}
     # AND CONVERT CODE FOR HISPANIC ETHNICITY (1=False, 5=True)
     hisp_dict = {1: False, 5: True}
+    
+    
+    
+    
     
 # PARAMETERS FOR do_sas_convert
 if do_sas_convert:
